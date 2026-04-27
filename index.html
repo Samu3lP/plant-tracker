@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#4A6B3A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Garden">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png" type="image/png">
+<title>Garden — Plant Health Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F4EFE3;
+    --surface: #FBF8F0;
+    --surface-2: #EFE8D5;
+    --ink: #2A2620;
+    --ink-soft: #5C5448;
+    --ink-faint: #8A8270;
+    --moss: #4A6B3A;
+    --moss-deep: #324A28;
+    --moss-light: #8FA67E;
+    --moss-tint: #DCE5D2;
+    --terracotta: #B86F4A;
+    --terracotta-tint: #F0DCCF;
+    --divider: #E5DDC9;
+    --shadow-sm: 0 1px 2px rgba(42, 38, 32, 0.04), 0 2px 6px rgba(42, 38, 32, 0.04);
+    --shadow-md: 0 2px 4px rgba(42, 38, 32, 0.05), 0 8px 24px rgba(42, 38, 32, 0.06);
+    --shadow-lg: 0 4px 12px rgba(42, 38, 32, 0.08), 0 16px 40px rgba(42, 38, 32, 0.1);
+    --radius-sm: 8px;
+    --radius: 14px;
+    --radius-lg: 20px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  body {
+    font-family: 'Manrope', -apple-system, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(143, 166, 126, 0.08) 0%, transparent 40%),
+      radial-gradient(circle at 80% 60%, rgba(184, 111, 74, 0.05) 0%, transparent 50%);
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 500;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    font-variation-settings: 'opsz' 48;
+  }
+
+  h1 { font-size: 32px; font-weight: 600; }
+  h2 { font-size: 24px; }
+  h3 { font-size: 18px; font-variation-settings: 'opsz' 24; }
+
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; border: none; background: none; }
+  input, textarea, select {
+    background: var(--surface);
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    width: 100%;
+    color: var(--ink);
+    transition: border-color 0.15s, background 0.15s;
+  }
+  input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--moss);
+    background: #fff;
+  }
+  textarea { resize: vertical; min-height: 80px; font-family: inherit; }
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+    letter-spacing: 0.02em;
+  }
+
+  /* App shell */
+  .app {
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .header {
+    padding: calc(var(--safe-top) + 18px) 22px 14px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--bg);
+    position: relative;
+    z-index: 5;
+  }
+
+  .header-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 28px;
+    letter-spacing: -0.025em;
+    font-variation-settings: 'opsz' 60;
+    line-height: 1;
+  }
+  .header-title em {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--moss);
+  }
+  .header-sub {
+    font-size: 12px;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 4px;
+  }
+  .header-action {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--divider);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-soft);
+    transition: all 0.15s;
+  }
+  .header-action:active { background: var(--surface-2); transform: scale(0.95); }
+
+  .scroll {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 22px 100px;
+  }
+
+  /* Bottom nav */
+  .tabbar {
+    display: flex;
+    background: rgba(251, 248, 240, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--divider);
+    padding: 8px 8px calc(var(--safe-bottom) + 8px);
+    position: relative;
+    z-index: 10;
+  }
+  .tab {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 3px;
+    padding: 8px 4px;
+    color: var(--ink-faint);
+    border-radius: var(--radius-sm);
+    transition: color 0.15s;
+  }
+  .tab.active { color: var(--moss); }
+  .tab svg { width: 22px; height: 22px; }
+  .tab span {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .tab-fab {
+    flex: 0 0 auto;
+    width: 56px;
+    margin-top: -16px;
+  }
+  .tab-fab .fab {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: var(--moss);
+    color: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 14px rgba(74, 107, 58, 0.4);
+    transition: transform 0.15s;
+  }
+  .tab-fab .fab:active { transform: scale(0.92); }
+  .tab-fab .fab svg { width: 24px; height: 24px; }
+
+  /* Greeting + Today */
+  .greeting {
+    margin-bottom: 24px;
+  }
+  .greeting h1 {
+    font-size: 30px;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+  .greeting h1 em {
+    font-style: italic;
+    color: var(--moss);
+    font-weight: 400;
+  }
+  .greeting .date {
+    font-size: 13px;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+  }
+
+  /* Section heading */
+  .section-title {
+    font-family: 'Fraunces', serif;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--ink-soft);
+    margin: 28px 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--divider);
+  }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid rgba(229, 221, 201, 0.5);
+  }
+  .card + .card { margin-top: 10px; }
+
+  /* Task / overdue card */
+  .task-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--surface);
+    padding: 14px 16px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid rgba(229, 221, 201, 0.5);
+    transition: transform 0.1s;
+  }
+  .task-card:active { transform: scale(0.99); }
+  .task-card + .task-card { margin-top: 8px; }
+  .task-card.overdue { border-left: 3px solid var(--terracotta); }
+  .task-card.due { border-left: 3px solid var(--moss-light); }
+
+  .task-icon {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .task-icon.water { background: #DDE7EE; color: #3D5A6E; }
+  .task-icon.fert { background: var(--terracotta-tint); color: var(--terracotta); }
+  .task-icon svg { width: 18px; height: 18px; }
+
+  .task-body { flex: 1; min-width: 0; }
+  .task-title {
+    font-weight: 600;
+    font-size: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .task-meta {
+    font-size: 13px;
+    color: var(--ink-faint);
+    margin-top: 2px;
+  }
+  .task-meta.overdue { color: var(--terracotta); font-weight: 600; }
+
+  .task-action {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    background: var(--moss);
+    color: var(--surface);
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background 0.15s;
+  }
+  .task-action:active { background: var(--moss-deep); }
+
+  /* Plant card */
+  .plant-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 14px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid rgba(229, 221, 201, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: transform 0.1s;
+  }
+  .plant-card:active { transform: scale(0.99); }
+  .plant-card + .plant-card { margin-top: 10px; }
+
+  .plant-thumb {
+    width: 56px; height: 56px;
+    border-radius: 12px;
+    background: var(--moss-tint);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--moss);
+    flex-shrink: 0;
+    overflow: hidden;
+    background-size: cover;
+    background-position: center;
+  }
+  .plant-thumb svg { width: 28px; height: 28px; }
+
+  .plant-info { flex: 1; min-width: 0; }
+  .plant-name {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 17px;
+    line-height: 1.2;
+    margin-bottom: 2px;
+    font-variation-settings: 'opsz' 24;
+  }
+  .plant-species {
+    font-style: italic;
+    font-size: 12px;
+    color: var(--ink-faint);
+    font-family: 'Fraunces', serif;
+    font-variation-settings: 'opsz' 14;
+    margin-bottom: 6px;
+  }
+  .plant-tags {
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .tag {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--ink-soft);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+  .tag.health-good { background: var(--moss-tint); color: var(--moss-deep); }
+  .tag.health-mid { background: #F0E5C8; color: #8A6F2A; }
+  .tag.health-low { background: var(--terracotta-tint); color: var(--terracotta); }
+
+  /* Empty state */
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--ink-faint);
+  }
+  .empty-icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+  }
+  .empty h3 {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .empty p { font-size: 14px; }
+
+  /* Plant detail */
+  .detail-hero {
+    margin: 0 -22px 20px;
+    padding: 0 22px 24px;
+    border-bottom: 1px solid var(--divider);
+  }
+  .back-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 0;
+    font-size: 14px;
+    color: var(--ink-soft);
+    margin-bottom: 16px;
+    font-weight: 500;
+  }
+  .back-btn svg { width: 16px; height: 16px; }
+
+  .detail-photo {
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    border-radius: var(--radius);
+    background: var(--moss-tint);
+    margin-bottom: 16px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--moss);
+    background-size: cover;
+    background-position: center;
+    overflow: hidden;
+  }
+  .detail-photo svg { width: 56px; height: 56px; opacity: 0.5; }
+
+  .detail-name {
+    font-family: 'Fraunces', serif;
+    font-size: 32px;
+    font-weight: 500;
+    line-height: 1.1;
+    margin-bottom: 4px;
+    font-variation-settings: 'opsz' 60;
+  }
+  .detail-species {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 16px;
+    color: var(--ink-faint);
+    margin-bottom: 16px;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+  .stat {
+    background: var(--surface);
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--divider);
+  }
+  .stat-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-faint);
+    margin-bottom: 4px;
+  }
+  .stat-value {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .stat-value.warn { color: var(--terracotta); }
+
+  .actions-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .action-btn {
+    padding: 12px 8px;
+    background: var(--surface);
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-sm);
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+  .action-btn:active { background: var(--moss-tint); transform: scale(0.97); }
+  .action-btn svg { width: 18px; height: 18px; color: var(--moss); }
+
+  /* Health chart */
+  .chart-wrap {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 16px;
+    border: 1px solid var(--divider);
+    margin-bottom: 18px;
+  }
+  .chart-wrap h4 {
+    font-family: 'Fraunces', serif;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-soft);
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
+  .chart-svg { width: 100%; height: 100px; display: block; }
+
+  /* Log entry */
+  .log-entry {
+    display: flex;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--divider);
+  }
+  .log-entry:last-child { border-bottom: none; }
+  .log-icon {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--surface-2);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .log-icon svg { width: 14px; height: 14px; color: var(--moss); }
+  .log-icon.water { background: #DDE7EE; }
+  .log-icon.water svg { color: #3D5A6E; }
+  .log-icon.fert { background: var(--terracotta-tint); }
+  .log-icon.fert svg { color: var(--terracotta); }
+
+  .log-body { flex: 1; }
+  .log-type {
+    font-weight: 600;
+    font-size: 14px;
+    text-transform: capitalize;
+  }
+  .log-date {
+    font-size: 12px;
+    color: var(--ink-faint);
+    margin-top: 1px;
+  }
+  .log-notes {
+    font-size: 14px;
+    color: var(--ink-soft);
+    margin-top: 4px;
+    font-style: italic;
+    font-family: 'Fraunces', serif;
+    font-variation-settings: 'opsz' 14;
+  }
+  .log-score {
+    align-self: flex-start;
+    font-family: 'Fraunces', serif;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--moss-tint);
+    color: var(--moss-deep);
+  }
+
+  /* Modal / sheet */
+  .sheet-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(42, 38, 32, 0.4);
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .sheet-backdrop.open { opacity: 1; pointer-events: auto; }
+
+  .sheet {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--bg);
+    border-radius: 24px 24px 0 0;
+    max-height: 90dvh;
+    z-index: 101;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 -10px 40px rgba(42, 38, 32, 0.15);
+  }
+  .sheet.open { transform: translateY(0); }
+  .sheet-handle {
+    width: 36px; height: 4px;
+    background: var(--ink-faint);
+    opacity: 0.3;
+    border-radius: 2px;
+    margin: 10px auto 6px;
+  }
+  .sheet-header {
+    padding: 8px 22px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--divider);
+  }
+  .sheet-header h2 {
+    font-size: 22px;
+    font-weight: 500;
+  }
+  .sheet-close, .sheet-save {
+    font-size: 15px;
+    font-weight: 600;
+    padding: 6px 0;
+  }
+  .sheet-close { color: var(--ink-soft); }
+  .sheet-save { color: var(--moss); }
+  .sheet-body {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 20px 22px calc(var(--safe-bottom) + 24px);
+  }
+
+  .field { margin-bottom: 16px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .seg {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    background: var(--surface-2);
+    border-radius: var(--radius-sm);
+    padding: 4px;
+  }
+  .seg button {
+    padding: 10px 4px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    transition: all 0.15s;
+  }
+  .seg button.active {
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .health-slider-wrap {
+    background: var(--surface);
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+  }
+  .health-slider-val {
+    font-family: 'Fraunces', serif;
+    font-size: 32px;
+    font-weight: 500;
+    text-align: center;
+    color: var(--moss);
+    margin-bottom: 8px;
+  }
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    padding: 0;
+    border: none;
+    width: 100%;
+  }
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 6px;
+    background: var(--surface-2);
+    border-radius: 3px;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 24px; height: 24px;
+    background: var(--moss);
+    border-radius: 50%;
+    margin-top: -9px;
+    border: 3px solid var(--surface);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .slider-scale {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--ink-faint);
+    margin-top: 6px;
+    padding: 0 2px;
+  }
+
+  .photo-input {
+    width: 100%;
+    aspect-ratio: 16/10;
+    background: var(--surface);
+    border: 2px dashed var(--divider);
+    border-radius: var(--radius);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px;
+    color: var(--ink-faint);
+    background-size: cover;
+    background-position: center;
+    overflow: hidden;
+    cursor: pointer;
+  }
+  .photo-input.has-photo { border-style: solid; }
+  .photo-input svg { width: 32px; height: 32px; }
+  .photo-input span { font-size: 13px; }
+
+  /* Settings */
+  .setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-sm);
+    width: 100%;
+    text-align: left;
+    color: var(--ink);
+    transition: background 0.15s;
+  }
+  .setting-row:active { background: var(--surface-2); }
+  .setting-row + .setting-row { margin-top: 8px; }
+  .setting-row svg { width: 18px; height: 18px; color: var(--ink-faint); }
+  .setting-row.danger { color: var(--terracotta); }
+
+  .toast {
+    position: fixed;
+    bottom: calc(var(--safe-bottom) + 90px);
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--ink);
+    color: var(--bg);
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: var(--shadow-lg);
+    z-index: 200;
+    opacity: 0;
+    transition: all 0.25s;
+    pointer-events: none;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Header -->
+  <div class="header" id="header"></div>
+
+  <!-- Main scrollable view -->
+  <div class="scroll" id="view"></div>
+
+  <!-- Bottom tab bar -->
+  <nav class="tabbar">
+    <button class="tab" data-route="home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>
+      <span>Today</span>
+    </button>
+    <button class="tab" data-route="plants">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V12"/><path d="M12 12C8 12 4 9 4 5c0 0 4 0 6 2 2 2 2 5 2 5z"/><path d="M12 12c4 0 8-3 8-7 0 0-4 0-6 2-2 2-2 5-2 5z"/></svg>
+      <span>Plants</span>
+    </button>
+    <div class="tab-fab">
+      <button class="fab" id="addBtn" aria-label="Add plant">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+    </div>
+    <button class="tab" data-route="logs">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+      <span>Log</span>
+    </button>
+    <button class="tab" data-route="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51h0a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      <span>Settings</span>
+    </button>
+  </nav>
+</div>
+
+<!-- Sheet -->
+<div class="sheet-backdrop" id="backdrop"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header" id="sheetHeader"></div>
+  <div class="sheet-body" id="sheetBody"></div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- DATA LAYER ---------- */
+const STORAGE_KEY = 'garden_v1';
+const DEFAULT_DATA = { plants: [], logs: [] };
+
+let data = loadData();
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return JSON.parse(JSON.stringify(DEFAULT_DATA));
+    return { ...DEFAULT_DATA, ...JSON.parse(raw) };
+  } catch { return JSON.parse(JSON.stringify(DEFAULT_DATA)); }
+}
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+function uid() { return Math.random().toString(36).slice(2, 11); }
+function today() { return new Date().toISOString().slice(0, 10); }
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+function daysAgo(iso) {
+  if (!iso) return null;
+  const ms = Date.now() - new Date(iso).getTime();
+  return Math.floor(ms / 86400000);
+}
+function relativeDay(iso) {
+  const n = daysAgo(iso);
+  if (n === null) return 'Never';
+  if (n === 0) return 'Today';
+  if (n === 1) return 'Yesterday';
+  if (n < 7) return `${n} days ago`;
+  if (n < 30) return `${Math.floor(n/7)} weeks ago`;
+  return `${Math.floor(n/30)} months ago`;
+}
+
+/* ---------- HELPERS ---------- */
+function getLastLog(plantId, type) {
+  return data.logs
+    .filter(l => l.plantId === plantId && (!type || l.type === type))
+    .sort((a, b) => b.date.localeCompare(a.date))[0];
+}
+function getLatestHealth(plantId) {
+  const log = data.logs
+    .filter(l => l.plantId === plantId && l.healthScore != null)
+    .sort((a, b) => b.date.localeCompare(a.date))[0];
+  return log ? log.healthScore : null;
+}
+function getOverdueTasks() {
+  const tasks = [];
+  for (const p of data.plants) {
+    if (p.wateringDays) {
+      const last = getLastLog(p.id, 'water');
+      const since = last ? daysAgo(last.date) : daysAgo(p.acquired);
+      if (since != null && since >= p.wateringDays) {
+        tasks.push({ plant: p, type: 'water', since, interval: p.wateringDays });
+      }
+    }
+    if (p.fertilisingDays) {
+      const last = getLastLog(p.id, 'fertilise');
+      const since = last ? daysAgo(last.date) : daysAgo(p.acquired);
+      if (since != null && since >= p.fertilisingDays) {
+        tasks.push({ plant: p, type: 'fertilise', since, interval: p.fertilisingDays });
+      }
+    }
+  }
+  return tasks.sort((a, b) => (b.since - b.interval) - (a.since - a.interval));
+}
+function healthClass(score) {
+  if (score == null) return '';
+  if (score >= 7) return 'health-good';
+  if (score >= 4) return 'health-mid';
+  return 'health-low';
+}
+
+/* ---------- ICONS ---------- */
+const icons = {
+  leaf: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 014 13V8a8 8 0 018-8h0a8 8 0 018 8 13 13 0 01-9 12.5"/><path d="M2 22c0-3 6-7 10-7"/></svg>',
+  water: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l5 6.5a6.5 6.5 0 11-10 0z"/></svg>',
+  fert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></svg>',
+  obs: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  chevron: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>',
+  camera: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>',
+  download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>',
+  upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>',
+};
+
+/* ---------- ROUTING ---------- */
+function getRoute() {
+  return window.location.hash.slice(1) || 'home';
+}
+function go(route) { window.location.hash = route; }
+window.addEventListener('hashchange', render);
+
+/* ---------- RENDER ---------- */
+function render() {
+  const route = getRoute();
+  const [name, param] = route.split('/');
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.route === name);
+  });
+  switch (name) {
+    case 'plants': renderPlants(); break;
+    case 'plant': renderPlantDetail(param); break;
+    case 'logs': renderLogs(); break;
+    case 'settings': renderSettings(); break;
+    default: renderHome();
+  }
+}
+
+/* HOME / TODAY */
+function renderHome() {
+  const hr = new Date().getHours();
+  const greet = hr < 5 ? 'Late night' : hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening';
+  const tasks = getOverdueTasks();
+  const tasksHTML = tasks.length === 0
+    ? `<div class="card" style="text-align:center;padding:24px;"><div style="font-family:'Fraunces',serif;font-style:italic;color:var(--ink-soft);font-size:18px;">All caught up</div><div style="font-size:13px;color:var(--ink-faint);margin-top:4px;">Nothing needs your attention today.</div></div>`
+    : tasks.map(t => {
+        const overdue = t.since > t.interval;
+        return `
+        <div class="task-card ${overdue ? 'overdue' : 'due'}" onclick="go('plant/${t.plant.id}')">
+          <div class="task-icon ${t.type === 'water' ? 'water' : 'fert'}">${t.type === 'water' ? icons.water : icons.fert}</div>
+          <div class="task-body">
+            <div class="task-title">${escape(t.plant.name)}</div>
+            <div class="task-meta ${overdue ? 'overdue' : ''}">${t.type === 'water' ? 'Water' : 'Fertilise'} · ${t.since - t.interval > 0 ? `${t.since - t.interval}d overdue` : 'due today'}</div>
+          </div>
+          <button class="task-action" onclick="event.stopPropagation(); quickLog('${t.plant.id}', '${t.type}')">Done</button>
+        </div>`;
+      }).join('');
+
+  const recent = [...data.logs].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+  const recentHTML = recent.length === 0 ? '' : recent.map(l => {
+    const p = data.plants.find(p => p.id === l.plantId);
+    if (!p) return '';
+    const cls = l.type === 'water' ? 'water' : l.type === 'fertilise' ? 'fert' : '';
+    const ico = l.type === 'water' ? icons.water : l.type === 'fertilise' ? icons.fert : icons.obs;
+    return `
+      <div class="log-entry" onclick="go('plant/${p.id}')">
+        <div class="log-icon ${cls}">${ico}</div>
+        <div class="log-body">
+          <div class="log-type">${l.type} · ${escape(p.name)}</div>
+          <div class="log-date">${relativeDay(l.date)}</div>
+          ${l.notes ? `<div class="log-notes">"${escape(l.notes)}"</div>` : ''}
+        </div>
+        ${l.healthScore != null ? `<div class="log-score">${l.healthScore}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  setHeader(`<div><div class="header-sub">${new Date().toLocaleDateString('en-GB', { weekday: 'long' })}</div><div class="header-title"><em>Garden</em></div></div>`);
+
+  document.getElementById('view').innerHTML = `
+    <div class="greeting">
+      <h1>${greet}, <em>Samuel</em></h1>
+      <div class="date">${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+    </div>
+
+    <div class="section-title">Today's tasks</div>
+    ${tasksHTML}
+
+    ${recent.length > 0 ? `<div class="section-title">Recent activity</div><div class="card" style="padding:4px 16px;">${recentHTML}</div>` : ''}
+
+    ${data.plants.length === 0 ? `
+      <div class="empty">
+        <div class="empty-icon">🌱</div>
+        <h3>No plants yet</h3>
+        <p>Tap the + button below to add your first one.</p>
+      </div>` : ''}
+  `;
+}
+
+/* PLANTS LIST */
+function renderPlants() {
+  setHeader(`<div><div class="header-sub">${data.plants.length} ${data.plants.length === 1 ? 'plant' : 'plants'}</div><div class="header-title"><em>My plants</em></div></div>`);
+
+  if (data.plants.length === 0) {
+    document.getElementById('view').innerHTML = `
+      <div class="empty" style="margin-top:60px;">
+        <div class="empty-icon">🌿</div>
+        <h3>Your collection is empty</h3>
+        <p>Add a plant with the + button to start tracking it.</p>
+      </div>`;
+    return;
+  }
+
+  const html = data.plants.map(p => {
+    const score = getLatestHealth(p.id);
+    const lastWater = getLastLog(p.id, 'water');
+    const photo = p.photo ? `style="background-image:url('${p.photo}')"` : '';
+    return `
+      <div class="plant-card" onclick="go('plant/${p.id}')">
+        <div class="plant-thumb" ${photo}>${!p.photo ? icons.leaf : ''}</div>
+        <div class="plant-info">
+          <div class="plant-name">${escape(p.name)}</div>
+          ${p.species ? `<div class="plant-species">${escape(p.species)}</div>` : ''}
+          <div class="plant-tags">
+            ${p.location ? `<span class="tag">${escape(p.location)}</span>` : ''}
+            ${score != null ? `<span class="tag ${healthClass(score)}">Health ${score}/10</span>` : ''}
+            ${lastWater ? `<span class="tag">💧 ${relativeDay(lastWater.date)}</span>` : ''}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('view').innerHTML = html;
+}
+
+/* PLANT DETAIL */
+function renderPlantDetail(id) {
+  const p = data.plants.find(p => p.id === id);
+  if (!p) { go('plants'); return; }
+  setHeader('');
+  const score = getLatestHealth(p.id);
+  const lastWater = getLastLog(p.id, 'water');
+  const lastFert = getLastLog(p.id, 'fertilise');
+  const logs = data.logs.filter(l => l.plantId === p.id).sort((a, b) => b.date.localeCompare(a.date));
+  const photo = p.photo ? `style="background-image:url('${p.photo}')"` : '';
+
+  const wateringSince = lastWater ? daysAgo(lastWater.date) : daysAgo(p.acquired);
+  const wateringWarn = p.wateringDays && wateringSince != null && wateringSince >= p.wateringDays;
+
+  // Health chart
+  const healthLogs = logs.filter(l => l.healthScore != null).reverse().slice(-12);
+  let chartHTML = '<div style="text-align:center;color:var(--ink-faint);font-size:13px;padding:20px 0;">Add observations with health scores to see the trend.</div>';
+  if (healthLogs.length >= 2) {
+    const w = 320, h = 80, pad = 8;
+    const xs = healthLogs.map((_, i) => pad + (i * (w - pad * 2) / (healthLogs.length - 1)));
+    const ys = healthLogs.map(l => h - pad - ((l.healthScore - 1) / 9) * (h - pad * 2));
+    const path = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
+    const area = `M${xs[0]},${h} L` + xs.map((x, i) => `${x},${ys[i]}`).join(' L') + ` L${xs[xs.length-1]},${h} Z`;
+    chartHTML = `<svg class="chart-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+      <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4A6B3A" stop-opacity="0.25"/><stop offset="100%" stop-color="#4A6B3A" stop-opacity="0"/></linearGradient></defs>
+      <path d="${area}" fill="url(#g)"/>
+      <path d="${path}" stroke="#4A6B3A" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      ${xs.map((x, i) => `<circle cx="${x}" cy="${ys[i]}" r="3" fill="#4A6B3A"/>`).join('')}
+    </svg>`;
+  }
+
+  document.getElementById('view').innerHTML = `
+    <div class="detail-hero">
+      <a class="back-btn" onclick="go('plants')">${icons.back} Plants</a>
+      <div class="detail-photo" ${photo}>${!p.photo ? icons.leaf : ''}</div>
+      <div class="detail-name">${escape(p.name)}</div>
+      ${p.species ? `<div class="detail-species">${escape(p.species)}</div>` : ''}
+
+      <div class="stats-grid">
+        <div class="stat"><div class="stat-label">Health</div><div class="stat-value ${score != null && score < 5 ? 'warn' : ''}">${score != null ? score + ' / 10' : '—'}</div></div>
+        <div class="stat"><div class="stat-label">Location</div><div class="stat-value" style="font-size:14px;">${escape(p.location || '—')}</div></div>
+        <div class="stat"><div class="stat-label">Last watered</div><div class="stat-value ${wateringWarn ? 'warn' : ''}" style="font-size:14px;">${lastWater ? relativeDay(lastWater.date) : 'Never'}</div></div>
+        <div class="stat"><div class="stat-label">Last fed</div><div class="stat-value" style="font-size:14px;">${lastFert ? relativeDay(lastFert.date) : 'Never'}</div></div>
+      </div>
+
+      <div class="actions-row">
+        <button class="action-btn" onclick="quickLog('${p.id}', 'water')">${icons.water}<span>Watered</span></button>
+        <button class="action-btn" onclick="quickLog('${p.id}', 'fertilise')">${icons.fert}<span>Fed</span></button>
+        <button class="action-btn" onclick="openLogSheet('${p.id}')">${icons.obs}<span>Note</span></button>
+      </div>
+      <div class="actions-row" style="grid-template-columns:1fr 1fr;">
+        <button class="action-btn" onclick="openPlantSheet('${p.id}')" style="font-size:12px;">Edit details</button>
+        <button class="action-btn" onclick="deletePlant('${p.id}')" style="color:var(--terracotta);">${icons.trash}<span>Delete</span></button>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <h4>Health trend</h4>
+      ${chartHTML}
+    </div>
+
+    <div class="section-title">History</div>
+    ${logs.length === 0 ? `<div class="empty" style="padding:30px 0;"><p>No log entries yet.</p></div>` :
+      `<div class="card" style="padding:4px 16px;">${logs.map(l => {
+        const cls = l.type === 'water' ? 'water' : l.type === 'fertilise' ? 'fert' : '';
+        const ico = l.type === 'water' ? icons.water : l.type === 'fertilise' ? icons.fert : icons.obs;
+        return `<div class="log-entry">
+          <div class="log-icon ${cls}">${ico}</div>
+          <div class="log-body">
+            <div class="log-type">${l.type}</div>
+            <div class="log-date">${fmtDate(l.date)}</div>
+            ${l.notes ? `<div class="log-notes">"${escape(l.notes)}"</div>` : ''}
+          </div>
+          ${l.healthScore != null ? `<div class="log-score">${l.healthScore}</div>` : ''}
+        </div>`;
+      }).join('')}</div>`
+    }
+
+    ${p.notes ? `<div class="section-title">Notes</div><div class="card"><div style="font-family:'Fraunces',serif;font-style:italic;color:var(--ink-soft);font-variation-settings:'opsz' 18;">${escape(p.notes)}</div></div>` : ''}
+
+    ${p.acquired ? `<div style="text-align:center;color:var(--ink-faint);font-size:12px;margin-top:24px;font-style:italic;">Acquired ${fmtDate(p.acquired)}</div>` : ''}
+  `;
+}
+
+/* LOGS */
+function renderLogs() {
+  setHeader(`<div><div class="header-sub">All entries</div><div class="header-title"><em>Log</em></div></div>`);
+  const logs = [...data.logs].sort((a, b) => b.date.localeCompare(a.date));
+  if (logs.length === 0) {
+    document.getElementById('view').innerHTML = `<div class="empty" style="margin-top:60px;"><div class="empty-icon">📓</div><h3>No entries yet</h3><p>Log a watering or observation from a plant's page.</p></div>`;
+    return;
+  }
+  // group by date
+  const groups = {};
+  logs.forEach(l => { (groups[l.date] = groups[l.date] || []).push(l); });
+  const html = Object.keys(groups).sort((a, b) => b.localeCompare(a)).map(date => {
+    return `<div class="section-title" style="margin-top:18px;">${fmtDate(date)}</div>
+      <div class="card" style="padding:4px 16px;">${groups[date].map(l => {
+        const p = data.plants.find(p => p.id === l.plantId);
+        const cls = l.type === 'water' ? 'water' : l.type === 'fertilise' ? 'fert' : '';
+        const ico = l.type === 'water' ? icons.water : l.type === 'fertilise' ? icons.fert : icons.obs;
+        return `<div class="log-entry" onclick="${p ? `go('plant/${p.id}')` : ''}">
+          <div class="log-icon ${cls}">${ico}</div>
+          <div class="log-body">
+            <div class="log-type">${l.type} · ${p ? escape(p.name) : 'deleted plant'}</div>
+            ${l.notes ? `<div class="log-notes">"${escape(l.notes)}"</div>` : ''}
+          </div>
+          ${l.healthScore != null ? `<div class="log-score">${l.healthScore}</div>` : ''}
+        </div>`;
+      }).join('')}</div>`;
+  }).join('');
+  document.getElementById('view').innerHTML = html;
+}
+
+/* SETTINGS */
+function renderSettings() {
+  setHeader(`<div><div class="header-sub">App</div><div class="header-title"><em>Settings</em></div></div>`);
+  document.getElementById('view').innerHTML = `
+    <div class="section-title">Data</div>
+    <button class="setting-row" onclick="exportData()">
+      <span><strong>Export backup</strong><br><span style="font-size:13px;color:var(--ink-faint);">Download as JSON</span></span>
+      ${icons.download}
+    </button>
+    <button class="setting-row" onclick="document.getElementById('importInput').click()">
+      <span><strong>Import backup</strong><br><span style="font-size:13px;color:var(--ink-faint);">Replace current data</span></span>
+      ${icons.upload}
+    </button>
+    <input type="file" id="importInput" accept=".json,application/json" style="display:none" onchange="importData(event)">
+
+    <div class="section-title">Stats</div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;padding:6px 0;"><span>Plants tracked</span><strong>${data.plants.length}</strong></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--divider);"><span>Total log entries</span><strong>${data.logs.length}</strong></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--divider);"><span>Storage used</span><strong>${(JSON.stringify(data).length/1024).toFixed(1)} KB</strong></div>
+    </div>
+
+    <div class="section-title">Danger zone</div>
+    <button class="setting-row danger" onclick="resetAll()">
+      <span><strong>Reset all data</strong><br><span style="font-size:13px;color:var(--ink-faint);">Delete all plants and logs</span></span>
+      ${icons.trash}
+    </button>
+
+    <div style="text-align:center;color:var(--ink-faint);font-size:12px;margin-top:32px;font-style:italic;font-family:'Fraunces',serif;">Garden · v1.0</div>
+  `;
+}
+
+/* ---------- ACTIONS ---------- */
+function quickLog(plantId, type) {
+  data.logs.push({ id: uid(), plantId, type, date: today(), notes: '', healthScore: null });
+  saveData();
+  toast(type === 'water' ? '💧 Logged' : type === 'fertilise' ? '✨ Logged' : 'Logged');
+  render();
+}
+
+function deletePlant(id) {
+  const p = data.plants.find(p => p.id === id);
+  if (!p) return;
+  if (!confirm(`Delete "${p.name}" and all its log entries?`)) return;
+  data.plants = data.plants.filter(x => x.id !== id);
+  data.logs = data.logs.filter(l => l.plantId !== id);
+  saveData();
+  toast('Plant removed');
+  go('plants');
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `garden-backup-${today()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Exported');
+}
+function importData(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      const parsed = JSON.parse(ev.target.result);
+      if (!parsed.plants || !parsed.logs) throw new Error('Invalid');
+      if (!confirm('This will replace all current data. Continue?')) return;
+      data = parsed;
+      saveData();
+      toast('Imported');
+      render();
+    } catch { alert('Invalid backup file.'); }
+  };
+  r.readAsText(f);
+  e.target.value = '';
+}
+function resetAll() {
+  if (!confirm('This permanently deletes all plants and logs. Are you sure?')) return;
+  if (!confirm('Really? This cannot be undone.')) return;
+  data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  saveData();
+  toast('Reset complete');
+  render();
+}
+
+/* ---------- SHEETS ---------- */
+const sheet = document.getElementById('sheet');
+const backdrop = document.getElementById('backdrop');
+function openSheet() { sheet.classList.add('open'); backdrop.classList.add('open'); }
+function closeSheet() { sheet.classList.remove('open'); backdrop.classList.remove('open'); }
+backdrop.addEventListener('click', closeSheet);
+
+function openPlantSheet(id) {
+  const editing = id ? data.plants.find(p => p.id === id) : null;
+  const p = editing || { name: '', species: '', location: '', acquired: today(), wateringDays: 7, fertilisingDays: 30, notes: '', photo: '' };
+  document.getElementById('sheetHeader').innerHTML = `
+    <button class="sheet-close" onclick="closeSheet()">Cancel</button>
+    <h2>${editing ? 'Edit plant' : 'New plant'}</h2>
+    <button class="sheet-save" onclick="savePlant('${id || ''}')">Save</button>`;
+  document.getElementById('sheetBody').innerHTML = `
+    <div class="field">
+      <div class="photo-input ${p.photo ? 'has-photo' : ''}" id="photoInput" style="${p.photo ? `background-image:url('${p.photo}')` : ''}">
+        ${!p.photo ? `${icons.camera}<span>Add photo</span>` : ''}
+      </div>
+      <input type="file" id="photoFile" accept="image/*" capture="environment" style="display:none">
+    </div>
+    <div class="field"><label>Name</label><input type="text" id="f_name" value="${escape(p.name)}" placeholder="e.g. Living room monstera"></div>
+    <div class="field"><label>Species (optional)</label><input type="text" id="f_species" value="${escape(p.species)}" placeholder="e.g. Monstera deliciosa"></div>
+    <div class="field"><label>Location</label><input type="text" id="f_location" value="${escape(p.location)}" placeholder="e.g. Kitchen window"></div>
+    <div class="field-row">
+      <div class="field"><label>Water every (days)</label><input type="number" id="f_water" value="${p.wateringDays || ''}" min="0" placeholder="7"></div>
+      <div class="field"><label>Feed every (days)</label><input type="number" id="f_fert" value="${p.fertilisingDays || ''}" min="0" placeholder="30"></div>
+    </div>
+    <div class="field"><label>Acquired</label><input type="date" id="f_acquired" value="${p.acquired || today()}"></div>
+    <div class="field"><label>Notes</label><textarea id="f_notes" placeholder="Any care preferences, sources, etc.">${escape(p.notes)}</textarea></div>
+  `;
+  // photo handler
+  const photoInput = document.getElementById('photoInput');
+  const photoFile = document.getElementById('photoFile');
+  let currentPhoto = p.photo || '';
+  photoInput.onclick = () => photoFile.click();
+  photoFile.onchange = async () => {
+    const f = photoFile.files[0];
+    if (!f) return;
+    currentPhoto = await compressImage(f);
+    photoInput.style.backgroundImage = `url('${currentPhoto}')`;
+    photoInput.classList.add('has-photo');
+    photoInput.innerHTML = '';
+  };
+  // expose
+  window.__photoVal = () => currentPhoto;
+  openSheet();
+}
+
+function savePlant(id) {
+  const v = sel => document.getElementById(sel).value.trim();
+  const name = v('f_name');
+  if (!name) { alert('Please enter a name.'); return; }
+  const obj = {
+    id: id || uid(),
+    name,
+    species: v('f_species'),
+    location: v('f_location'),
+    acquired: v('f_acquired') || today(),
+    wateringDays: parseInt(v('f_water')) || 0,
+    fertilisingDays: parseInt(v('f_fert')) || 0,
+    notes: v('f_notes'),
+    photo: window.__photoVal ? window.__photoVal() : ''
+  };
+  if (id) {
+    const i = data.plants.findIndex(p => p.id === id);
+    if (i !== -1) data.plants[i] = obj;
+  } else {
+    data.plants.push(obj);
+  }
+  saveData();
+  closeSheet();
+  toast(id ? 'Updated' : 'Plant added');
+  if (!id) go('plant/' + obj.id);
+  else render();
+}
+
+function openLogSheet(plantId) {
+  const p = data.plants.find(p => p.id === plantId);
+  if (!p) return;
+  document.getElementById('sheetHeader').innerHTML = `
+    <button class="sheet-close" onclick="closeSheet()">Cancel</button>
+    <h2>New entry</h2>
+    <button class="sheet-save" onclick="saveLog('${plantId}')">Save</button>`;
+  document.getElementById('sheetBody').innerHTML = `
+    <div style="font-family:'Fraunces',serif;font-style:italic;color:var(--ink-soft);margin-bottom:18px;text-align:center;">for ${escape(p.name)}</div>
+    <div class="field">
+      <label>Type</label>
+      <div class="seg" id="logType">
+        <button data-v="water">Water</button>
+        <button data-v="fertilise">Feed</button>
+        <button data-v="observation" class="active">Observe</button>
+        <button data-v="repot">Repot</button>
+      </div>
+    </div>
+    <div class="field"><label>Date</label><input type="date" id="f_date" value="${today()}"></div>
+    <div class="field">
+      <label>Health score</label>
+      <div class="health-slider-wrap">
+        <div class="health-slider-val" id="healthVal">7</div>
+        <input type="range" id="f_health" min="1" max="10" value="7">
+        <div class="slider-scale"><span>Struggling</span><span>Thriving</span></div>
+      </div>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="f_lognotes" placeholder="New leaf, soil moisture, pests, anything you noticed..."></textarea></div>
+  `;
+  // segmented control
+  let logType = 'observation';
+  document.querySelectorAll('#logType button').forEach(b => {
+    b.onclick = () => {
+      document.querySelectorAll('#logType button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      logType = b.dataset.v;
+    };
+  });
+  window.__logType = () => logType;
+  // health slider
+  const slider = document.getElementById('f_health');
+  const valDisplay = document.getElementById('healthVal');
+  slider.oninput = () => valDisplay.textContent = slider.value;
+  openSheet();
+}
+
+function saveLog(plantId) {
+  const type = window.__logType();
+  const date = document.getElementById('f_date').value || today();
+  const healthScore = parseInt(document.getElementById('f_health').value);
+  const notes = document.getElementById('f_lognotes').value.trim();
+  data.logs.push({ id: uid(), plantId, type, date, healthScore, notes });
+  saveData();
+  closeSheet();
+  toast('Entry saved');
+  render();
+}
+
+/* image compression */
+async function compressImage(file) {
+  return new Promise(resolve => {
+    const r = new FileReader();
+    r.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 800;
+        let w = img.width, h = img.height;
+        if (w > max || h > max) {
+          if (w > h) { h = h * max / w; w = max; }
+          else { w = w * max / h; h = max; }
+        }
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL('image/jpeg', 0.75));
+      };
+      img.src = e.target.result;
+    };
+    r.readAsDataURL(file);
+  });
+}
+
+/* ---------- UTIL ---------- */
+function escape(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function setHeader(html) { document.getElementById('header').innerHTML = html; }
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+/* ---------- EVENTS ---------- */
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => go(t.dataset.route));
+});
+document.getElementById('addBtn').addEventListener('click', () => {
+  const r = getRoute();
+  if (r.startsWith('plant/')) openLogSheet(r.split('/')[1]);
+  else openPlantSheet();
+});
+
+/* PWA service worker */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+
+/* boot */
+go(getRoute());
+render();
+</script>
+</body>
+</html>
