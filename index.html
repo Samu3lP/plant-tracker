@@ -910,7 +910,8 @@ async function identifyPlant(base64Image) {
     throw new Error(err.error?.message || `API error ${res.status}`);
   }
   const json = await res.json();
-  return JSON.parse(json.content[0].text);
+  const text = json.content[0].text.replace(/```[a-z]*\n?/gi, '').trim();
+  return JSON.parse(text);
 }
 
 /* ---------- ROUTING ---------- */
