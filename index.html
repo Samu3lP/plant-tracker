@@ -900,7 +900,7 @@ async function identifyPlant(base64Image) {
         role: 'user',
         content: [
           { type: 'image', source: { type: 'base64', media_type: mediaType, data } },
-          { type: 'text', text: 'Identify this plant. Reply with JSON only, no markdown:\n{"commonName":"...","scientificName":"...","wateringDays":7,"fertilisingDays":30,"notes":"One sentence care tip."}\nIf not a plant, set commonName to null.' }
+          { type: 'text', text: 'Identify this plant and reply with raw JSON only (no markdown, no explanation):\n{"commonName":"<common name>","scientificName":"<latin name>","wateringDays":<number>,"fertilisingDays":<number>,"notes":"<one sentence care tip>"}\nBest guess is fine. Only set commonName to null if the image contains no plant at all.' }
         ]
       }]
     })
@@ -1298,13 +1298,12 @@ function openPlantSheet(id) {
     try {
       const result = await identifyPlant(currentPhoto);
       if (result && result.commonName) {
-        const nameField = document.getElementById('f_name');
-        if (!nameField.value) nameField.value = result.commonName;
+        document.getElementById('f_name').value = result.commonName;
         if (result.scientificName) document.getElementById('f_species').value = result.scientificName;
         if (result.wateringDays) document.getElementById('f_water').value = result.wateringDays;
         if (result.fertilisingDays) document.getElementById('f_fert').value = result.fertilisingDays;
-        if (result.notes && !document.getElementById('f_notes').value) document.getElementById('f_notes').value = result.notes;
-        toast('Plant identified!');
+        if (result.notes) document.getElementById('f_notes').value = result.notes;
+        toast(`Identified: ${result.commonName}`);
       } else {
         toast('Could not identify — try a clearer photo');
       }
