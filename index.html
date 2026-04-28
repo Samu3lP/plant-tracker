@@ -883,6 +883,8 @@ const icons = {
 async function identifyPlant(base64Image) {
   const key = getApiKey();
   if (!key) { alert('Add your Claude API key in Settings first.'); return null; }
+  const mediaType = base64Image.match(/data:([^;]+);base64,/)?.[1] || 'image/jpeg';
+  const data = base64Image.split(',')[1];
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -897,13 +899,16 @@ async function identifyPlant(base64Image) {
       messages: [{
         role: 'user',
         content: [
-          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64Image.split(',')[1] } },
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data } },
           { type: 'text', text: 'Identify this plant. Reply with JSON only, no markdown:\n{"commonName":"...","scientificName":"...","wateringDays":7,"fertilisingDays":30,"notes":"One sentence care tip."}\nIf not a plant, set commonName to null.' }
         ]
       }]
     })
   });
-  if (!res.ok) throw new Error(`API error ${res.status}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `API error ${res.status}`);
+  }
   const json = await res.json();
   return JSON.parse(json.content[0].text);
 }
