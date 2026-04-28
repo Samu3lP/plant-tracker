@@ -783,6 +783,7 @@
 <script>
 /* ---------- DATA LAYER ---------- */
 const STORAGE_KEY = 'garden_v1';
+const APIKEY_KEY = 'garden_apikey';
 const DEFAULT_DATA = { plants: [], logs: [] };
 
 let data = loadData();
@@ -796,6 +797,12 @@ function loadData() {
 }
 function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+function getApiKey() { return localStorage.getItem(APIKEY_KEY) || ''; }
+function saveApiKey() {
+  const k = document.getElementById('apiKeyInput').value.trim();
+  localStorage.setItem(APIKEY_KEY, k);
+  toast('API key saved');
 }
 function uid() { return Math.random().toString(36).slice(2, 11); }
 function today() { return new Date().toISOString().slice(0, 10); }
@@ -871,6 +878,35 @@ const icons = {
   upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>',
   trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>',
 };
+
+/* ---------- AI IDENTIFICATION ---------- */
+async function identifyPlant(base64Image) {
+  const key = getApiKey();
+  if (!key) { alert('Add your Claude API key in Settings first.'); return null; }
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 512,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64Image.split(',')[1] } },
+          { type: 'text', text: 'Identify this plant. Reply with JSON only, no markdown:\n{"commonName":"...","scientificName":"...","wateringDays":7,"fertilisingDays":30,"notes":"One sentence care tip."}\nIf not a plant, set commonName to null.' }
+        ]
+      }]
+    })
+  });
+  if (!res.ok) throw new Error(`API error ${res.status}`);
+  const json = await res.json();
+  return JSON.parse(json.content[0].text);
+}
 
 /* ---------- ROUTING ---------- */
 function getRoute() {
@@ -1109,6 +1145,16 @@ function renderLogs() {
 function renderSettings() {
   setHeader(`<div><div class="header-sub">App</div><div class="header-title"><em>Settings</em></div></div>`);
   document.getElementById('view').innerHTML = `
+    <div class="section-title">AI</div>
+    <div class="card" style="padding:16px;">
+      <div class="field" style="margin-bottom:10px;">
+        <label>Claude API Key</label>
+        <input type="password" id="apiKeyInput" value="${getApiKey()}" placeholder="sk-ant-…" autocomplete="off">
+      </div>
+      <button onclick="saveApiKey()" style="width:100%;padding:11px;background:var(--moss);color:var(--surface);border-radius:var(--radius-sm);font-weight:600;font-size:14px;">Save key</button>
+      <div style="font-size:12px;color:var(--ink-faint);margin-top:10px;">Used to identify plants from photos. Key is stored locally on this device only.</div>
+    </div>
+
     <div class="section-title">Data</div>
     <button class="setting-row" onclick="exportData()">
       <span><strong>Export backup</strong><br><span style="font-size:13px;color:var(--ink-faint);">Download as JSON</span></span>
@@ -1212,6 +1258,7 @@ function openPlantSheet(id) {
         ${!p.photo ? `${icons.camera}<span>Add photo</span>` : ''}
       </div>
       <input type="file" id="photoFile" accept="image/*" capture="environment" style="display:none">
+      <button id="identifyBtn" style="${p.photo ? '' : 'display:none;'}margin-top:8px;width:100%;padding:11px;background:var(--moss);color:var(--surface);border-radius:var(--radius-sm);font-weight:600;font-size:14px;">Identify plant</button>
     </div>
     <div class="field"><label>Name</label><input type="text" id="f_name" value="${escape(p.name)}" placeholder="e.g. Living room monstera"></div>
     <div class="field"><label>Species (optional)</label><input type="text" id="f_species" value="${escape(p.species)}" placeholder="e.g. Monstera deliciosa"></div>
@@ -1235,6 +1282,32 @@ function openPlantSheet(id) {
     photoInput.style.backgroundImage = `url('${currentPhoto}')`;
     photoInput.classList.add('has-photo');
     photoInput.innerHTML = '';
+    document.getElementById('identifyBtn').style.display = '';
+  };
+  // identify handler
+  document.getElementById('identifyBtn').onclick = async function() {
+    if (!currentPhoto) return;
+    this.textContent = 'Identifying…';
+    this.disabled = true;
+    try {
+      const result = await identifyPlant(currentPhoto);
+      if (result && result.commonName) {
+        const nameField = document.getElementById('f_name');
+        if (!nameField.value) nameField.value = result.commonName;
+        if (result.scientificName) document.getElementById('f_species').value = result.scientificName;
+        if (result.wateringDays) document.getElementById('f_water').value = result.wateringDays;
+        if (result.fertilisingDays) document.getElementById('f_fert').value = result.fertilisingDays;
+        if (result.notes && !document.getElementById('f_notes').value) document.getElementById('f_notes').value = result.notes;
+        toast('Plant identified!');
+      } else {
+        toast('Could not identify — try a clearer photo');
+      }
+    } catch(e) {
+      alert('Identification failed: ' + e.message);
+    } finally {
+      this.textContent = 'Identify plant';
+      this.disabled = false;
+    }
   };
   // expose
   window.__photoVal = () => currentPhoto;
