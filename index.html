@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#4A6B3A">
+<meta name="theme-color" content="#656900">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Garden">
@@ -16,19 +16,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #F4EFE3;
-    --surface: #FBF8F0;
-    --surface-2: #EFE8D5;
-    --ink: #2A2620;
-    --ink-soft: #5C5448;
-    --ink-faint: #8A8270;
-    --moss: #4A6B3A;
-    --moss-deep: #324A28;
-    --moss-light: #8FA67E;
-    --moss-tint: #DCE5D2;
-    --terracotta: #B86F4A;
-    --terracotta-tint: #F0DCCF;
-    --divider: #E5DDC9;
+    --bg: #F7F2DF;
+    --surface: #FCF8E9;
+    --surface-2: #EFE7C9;
+    --ink: #2C2B08;
+    --ink-soft: #51450C;
+    --ink-faint: #827D18;
+    --moss: #656900;
+    --moss-deep: #51450C;
+    --moss-light: #827D18;
+    --moss-tint: #E8E4B8;
+    --terracotta: #B8941F;
+    --terracotta-tint: #F2E5B0;
+    --divider: #E0D9B8;
     --shadow-sm: 0 1px 2px rgba(42, 38, 32, 0.04), 0 2px 6px rgba(42, 38, 32, 0.04);
     --shadow-md: 0 2px 4px rgba(42, 38, 32, 0.05), 0 8px 24px rgba(42, 38, 32, 0.06);
     --shadow-lg: 0 4px 12px rgba(42, 38, 32, 0.08), 0 16px 40px rgba(42, 38, 32, 0.1);
@@ -55,8 +55,8 @@
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     background-image:
-      radial-gradient(circle at 20% 10%, rgba(143, 166, 126, 0.08) 0%, transparent 40%),
-      radial-gradient(circle at 80% 60%, rgba(184, 111, 74, 0.05) 0%, transparent 50%);
+      radial-gradient(circle at 20% 10%, rgba(130, 125, 24, 0.08) 0%, transparent 40%),
+      radial-gradient(circle at 80% 60%, rgba(228, 204, 128, 0.05) 0%, transparent 50%);
   }
 
   h1, h2, h3, h4 {
@@ -193,7 +193,7 @@
     background: var(--moss);
     color: var(--surface);
     display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 14px rgba(74, 107, 58, 0.4);
+    box-shadow: 0 4px 14px rgba(101, 105, 0, 0.4);
     transition: transform 0.15s;
   }
   .tab-fab .fab:active { transform: scale(0.92); }
@@ -1058,10 +1058,10 @@ function renderPlantDetail(id) {
     const path = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
     const area = `M${xs[0]},${h} L` + xs.map((x, i) => `${x},${ys[i]}`).join(' L') + ` L${xs[xs.length-1]},${h} Z`;
     chartHTML = `<svg class="chart-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-      <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4A6B3A" stop-opacity="0.25"/><stop offset="100%" stop-color="#4A6B3A" stop-opacity="0"/></linearGradient></defs>
+      <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#656900" stop-opacity="0.25"/><stop offset="100%" stop-color="#656900" stop-opacity="0"/></linearGradient></defs>
       <path d="${area}" fill="url(#g)"/>
-      <path d="${path}" stroke="#4A6B3A" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-      ${xs.map((x, i) => `<circle cx="${x}" cy="${ys[i]}" r="3" fill="#4A6B3A"/>`).join('')}
+      <path d="${path}" stroke="#656900" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      ${xs.map((x, i) => `<circle cx="${x}" cy="${ys[i]}" r="3" fill="#656900"/>`).join('')}
     </svg>`;
   }
 
