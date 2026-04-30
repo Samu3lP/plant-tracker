@@ -848,11 +848,12 @@ function getOverdueTasks() {
         tasks.push({ plant: p, type: 'water', since, interval: p.wateringDays });
       }
     }
-    if (p.fertilisingDays) {
+    if (p.mistsPerWeek) {
       const last = getLastLog(p.id, 'fertilise');
       const since = last ? daysAgo(last.date) : daysAgo(p.acquired);
-      if (since != null && since >= p.fertilisingDays) {
-        tasks.push({ plant: p, type: 'fertilise', since, interval: p.fertilisingDays });
+      const interval = Math.round(7 / p.mistsPerWeek);
+      if (since != null && since >= interval) {
+        tasks.push({ plant: p, type: 'fertilise', since, interval });
       }
     }
   }
@@ -900,7 +901,7 @@ async function identifyPlant(base64Image) {
         role: 'user',
         content: [
           { type: 'image', source: { type: 'base64', media_type: mediaType, data } },
-          { type: 'text', text: 'Identify this plant and reply with raw JSON only (no markdown, no explanation):\n{"commonName":"<common name>","scientificName":"<latin name>","wateringDays":<number>,"fertilisingDays":<number>,"notes":"<one sentence care tip>"}\nBest guess is fine. Only set commonName to null if the image contains no plant at all.' }
+          { type: 'text', text: 'Identify this plant and reply with raw JSON only (no markdown, no explanation):\n{"commonName":"<common name>","scientificName":"<latin name>","wateringDays":<number>,"mistsPerWeek":<number>,"notes":"<one sentence care tip>"}\nmistsPerWeek is how many times per week this plant should be misted (0 if it does not benefit from misting). Best guess is fine. Only set commonName to null if the image contains no plant at all.' }
         ]
       }]
     })
@@ -1075,12 +1076,12 @@ function renderPlantDetail(id) {
         <div class="stat"><div class="stat-label">Health</div><div class="stat-value ${score != null && score < 5 ? 'warn' : ''}">${score != null ? score + ' / 10' : '—'}</div></div>
         <div class="stat"><div class="stat-label">Location</div><div class="stat-value" style="font-size:14px;">${escape(p.location || '—')}</div></div>
         <div class="stat"><div class="stat-label">Last watered</div><div class="stat-value ${wateringWarn ? 'warn' : ''}" style="font-size:14px;">${lastWater ? relativeDay(lastWater.date) : 'Never'}</div></div>
-        <div class="stat"><div class="stat-label">Last fed</div><div class="stat-value" style="font-size:14px;">${lastFert ? relativeDay(lastFert.date) : 'Never'}</div></div>
+        <div class="stat"><div class="stat-label">Last misted</div><div class="stat-value" style="font-size:14px;">${lastFert ? relativeDay(lastFert.date) : 'Never'}</div></div>
       </div>
 
       <div class="actions-row">
         <button class="action-btn" onclick="quickLog('${p.id}', 'water')">${icons.water}<span>Watered</span></button>
-        <button class="action-btn" onclick="quickLog('${p.id}', 'fertilise')">${icons.fert}<span>Fed</span></button>
+        <button class="action-btn" onclick="quickLog('${p.id}', 'fertilise')">${icons.fert}<span>Misted</span></button>
         <button class="action-btn" onclick="openLogSheet('${p.id}')">${icons.obs}<span>Note</span></button>
       </div>
       <div class="actions-row" style="grid-template-columns:1fr 1fr;">
@@ -1253,7 +1254,7 @@ backdrop.addEventListener('click', closeSheet);
 
 function openPlantSheet(id) {
   const editing = id ? data.plants.find(p => p.id === id) : null;
-  const p = editing || { name: '', species: '', location: '', acquired: today(), wateringDays: 7, fertilisingDays: 30, notes: '', photo: '' };
+  const p = editing || { name: '', species: '', location: '', acquired: today(), wateringDays: 7, mistsPerWeek: 2, notes: '', photo: '' };
   document.getElementById('sheetHeader').innerHTML = `
     <button class="sheet-close" onclick="closeSheet()">Cancel</button>
     <h2>${editing ? 'Edit plant' : 'New plant'}</h2>
@@ -1271,7 +1272,7 @@ function openPlantSheet(id) {
     <div class="field"><label>Location</label><input type="text" id="f_location" value="${escape(p.location)}" placeholder="e.g. Kitchen window"></div>
     <div class="field-row">
       <div class="field"><label>Water every (days)</label><input type="number" id="f_water" value="${p.wateringDays || ''}" min="0" placeholder="7"></div>
-      <div class="field"><label>Feed every (days)</label><input type="number" id="f_fert" value="${p.fertilisingDays || ''}" min="0" placeholder="30"></div>
+      <div class="field"><label>Mists per week</label><input type="number" id="f_fert" value="${p.mistsPerWeek || ''}" min="0" placeholder="2"></div>
     </div>
     <div class="field"><label>Acquired</label><input type="date" id="f_acquired" value="${p.acquired || today()}"></div>
     <div class="field"><label>Notes</label><textarea id="f_notes" placeholder="Any care preferences, sources, etc.">${escape(p.notes)}</textarea></div>
@@ -1301,7 +1302,7 @@ function openPlantSheet(id) {
         document.getElementById('f_name').value = result.commonName;
         if (result.scientificName) document.getElementById('f_species').value = result.scientificName;
         if (result.wateringDays) document.getElementById('f_water').value = result.wateringDays;
-        if (result.fertilisingDays) document.getElementById('f_fert').value = result.fertilisingDays;
+        if (result.mistsPerWeek) document.getElementById('f_fert').value = result.mistsPerWeek;
         if (result.notes) document.getElementById('f_notes').value = result.notes;
         toast(`Identified: ${result.commonName}`);
       } else {
@@ -1330,7 +1331,7 @@ function savePlant(id) {
     location: v('f_location'),
     acquired: v('f_acquired') || today(),
     wateringDays: parseInt(v('f_water')) || 0,
-    fertilisingDays: parseInt(v('f_fert')) || 0,
+    mistsPerWeek: parseInt(v('f_fert')) || 0,
     notes: v('f_notes'),
     photo: window.__photoVal ? window.__photoVal() : ''
   };
@@ -1360,7 +1361,7 @@ function openLogSheet(plantId) {
       <label>Type</label>
       <div class="seg" id="logType">
         <button data-v="water">Water</button>
-        <button data-v="fertilise">Feed</button>
+        <button data-v="fertilise">Mist</button>
         <button data-v="observation" class="active">Observe</button>
         <button data-v="repot">Repot</button>
       </div>
