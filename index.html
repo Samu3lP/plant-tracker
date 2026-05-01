@@ -1140,7 +1140,18 @@ function renderPlants() {
     return;
   }
 
-  const html = data.plants.map(p => {
+  const locationGroups = {};
+  data.plants.forEach(p => {
+    const loc = p.location || '';
+    (locationGroups[loc] = locationGroups[loc] || []).push(p);
+  });
+  const sortedLocs = Object.keys(locationGroups).sort((a, b) => {
+    if (!a) return 1;
+    if (!b) return -1;
+    return a.localeCompare(b);
+  });
+
+  const plantCard = p => {
     const score = getLatestHealth(p.id);
     const lastWater = getLastLog(p.id, 'water');
     const photo = p.photo ? `style="background-image:url('${p.photo}')"` : '';
@@ -1151,13 +1162,17 @@ function renderPlants() {
           <div class="plant-name">${escape(p.name)}</div>
           ${p.species ? `<div class="plant-species">${escape(p.species)}</div>` : ''}
           <div class="plant-tags">
-            ${p.location ? `<span class="tag">${escape(p.location)}</span>` : ''}
             ${lastWater ? `<span class="tag">💧 ${relativeDay(lastWater.date)}</span>` : ''}
           </div>
           ${score != null ? `<div style="display:flex;align-items:center;gap:8px;margin-top:6px;"><span style="font-size:11px;font-weight:600;color:var(--ink-faint);min-width:28px;">Health</span>${healthBarHTML(score, true)}<span style="font-size:11px;font-weight:700;color:var(--ink-soft);">${score}</span></div>` : ''}
         </div>
       </div>`;
-  }).join('');
+  };
+
+  const html = sortedLocs.map(loc =>
+    `<div class="section-title">${loc ? escape(loc) : 'No location'}</div>` +
+    locationGroups[loc].map(plantCard).join('')
+  ).join('');
 
   document.getElementById('view').innerHTML = html;
 }
