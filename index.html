@@ -843,23 +843,25 @@ function getLastLog(plantId, type) {
     .sort((a, b) => b.date.localeCompare(a.date))[0];
 }
 function computeHealth(plant, atDate, visualScore) {
-  let waterPenalty = 0;
+  // Watering: 10 if on schedule, lose 1 per excess day overdue
+  let waterScore = 10;
   if (plant.wateringDays) {
     const lastWater = data.logs
       .filter(l => l.plantId === plant.id && l.type === 'water' && l.date <= atDate)
       .sort((a, b) => b.date.localeCompare(a.date))[0];
     const since = lastWater ? daysBetween(lastWater.date, atDate) : daysBetween(plant.acquired || atDate, atDate);
-    if (since >= plant.wateringDays) waterPenalty = -(since - plant.wateringDays);
+    if (since > plant.wateringDays) waterScore = Math.max(0, 10 - (since - plant.wateringDays));
   }
-  let mistPenalty = 0;
+  // Misting: (times misted in last 7 days / mistsPerWeek) * 10, capped at 10
+  let mistScore = 10;
   if (plant.mistsPerWeek) {
-    const lastMist = data.logs
-      .filter(l => l.plantId === plant.id && l.type === 'fertilise' && l.date <= atDate)
-      .sort((a, b) => b.date.localeCompare(a.date))[0];
-    const since = lastMist ? daysBetween(lastMist.date, atDate) : 999;
-    if (since >= 7) mistPenalty = -0.25 * (since - 7);
+    const weekStart = new Date(new Date(atDate).getTime() - 7 * 86400000).toISOString().slice(0, 10);
+    const mistCount = data.logs.filter(l =>
+      l.plantId === plant.id && l.type === 'fertilise' && l.date <= atDate && l.date >= weekStart
+    ).length;
+    mistScore = Math.min(10, (mistCount / plant.mistsPerWeek) * 10);
   }
-  return Math.round(((waterPenalty + mistPenalty + visualScore) / 3) * 10);
+  return Math.round(((waterScore + mistScore + visualScore) / 3) * 10);
 }
 function getLatestHealth(plantId) {
   const plant = data.plants.find(p => p.id === plantId);
