@@ -153,7 +153,7 @@
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
-    padding: 0 22px 100px;
+    padding: 20px 22px 100px;
   }
 
   /* Bottom nav */
@@ -515,12 +515,13 @@
   .log-icon.water svg { color: #3D5A6E; }
   .log-icon.fert { background: var(--terracotta-tint); }
   .log-icon.fert svg { color: var(--terracotta); }
+  .log-icon.health-check { background: var(--moss-tint); }
+  .log-icon.health-check svg { color: var(--moss); }
 
   .log-body { flex: 1; }
   .log-type {
     font-weight: 600;
     font-size: 14px;
-    text-transform: capitalize;
   }
   .log-date {
     font-size: 12px;
@@ -815,6 +816,9 @@ function daysAgo(iso) {
   const ms = Date.now() - new Date(iso).getTime();
   return Math.floor(ms / 86400000);
 }
+function daysBetween(isoA, isoB) {
+  return Math.floor((new Date(isoB) - new Date(isoA)) / 86400000);
+}
 function relativeDay(iso) {
   const n = daysAgo(iso);
   if (n === null) return 'Never';
@@ -831,11 +835,33 @@ function getLastLog(plantId, type) {
     .filter(l => l.plantId === plantId && (!type || l.type === type))
     .sort((a, b) => b.date.localeCompare(a.date))[0];
 }
+function computeHealth(plant, atDate, visualScore) {
+  let waterPenalty = 0;
+  if (plant.wateringDays) {
+    const lastWater = data.logs
+      .filter(l => l.plantId === plant.id && l.type === 'water' && l.date <= atDate)
+      .sort((a, b) => b.date.localeCompare(a.date))[0];
+    const since = lastWater ? daysBetween(lastWater.date, atDate) : daysBetween(plant.acquired || atDate, atDate);
+    if (since >= plant.wateringDays) waterPenalty = -since;
+  }
+  let mistPenalty = 0;
+  if (plant.mistsPerWeek) {
+    const lastMist = data.logs
+      .filter(l => l.plantId === plant.id && l.type === 'fertilise' && l.date <= atDate)
+      .sort((a, b) => b.date.localeCompare(a.date))[0];
+    const since = lastMist ? daysBetween(lastMist.date, atDate) : 999;
+    if (since >= 7) mistPenalty = -0.25 * since;
+  }
+  return parseFloat(((waterPenalty + mistPenalty + visualScore) / 3).toFixed(1));
+}
 function getLatestHealth(plantId) {
-  const log = data.logs
-    .filter(l => l.plantId === plantId && l.healthScore != null)
+  const plant = data.plants.find(p => p.id === plantId);
+  if (!plant) return null;
+  const hc = data.logs
+    .filter(l => l.plantId === plantId && l.type === 'health-check' && l.visualScore != null)
     .sort((a, b) => b.date.localeCompare(a.date))[0];
-  return log ? log.healthScore : null;
+  if (!hc) return null;
+  return computeHealth(plant, today(), hc.visualScore);
 }
 function getOverdueTasks() {
   const tasks = [];
@@ -860,9 +886,23 @@ function getOverdueTasks() {
 }
 function healthClass(score) {
   if (score == null) return '';
-  if (score >= 7) return 'health-good';
-  if (score >= 4) return 'health-mid';
+  if (score >= 2.5) return 'health-good';
+  if (score >= 1) return 'health-mid';
   return 'health-low';
+}
+function logTypeLabel(t) {
+  return { water: 'Watered', fertilise: 'Misted', 'health-check': 'Health check', observation: 'Observation', repot: 'Repotted' }[t] || t;
+}
+function logIcon(type) {
+  return type === 'water' ? icons.water : type === 'fertilise' ? icons.fert : type === 'health-check' ? icons.healthcheck : icons.obs;
+}
+function logCls(type) {
+  return type === 'water' ? 'water' : type === 'fertilise' ? 'fert' : type === 'health-check' ? 'health-check' : '';
+}
+function logScoreBadge(l) {
+  if (l.type === 'health-check' && l.visualScore != null) return `<div class="log-score">${l.visualScore}</div>`;
+  if (l.healthScore != null) return `<div class="log-score">${l.healthScore}</div>`;
+  return '';
 }
 
 /* ---------- ICONS ---------- */
@@ -871,6 +911,7 @@ const icons = {
   water: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l5 6.5a6.5 6.5 0 11-10 0z"/></svg>',
   fert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></svg>',
   obs: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  healthcheck: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
   back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
   chevron: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>',
   camera: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>',
@@ -961,17 +1002,15 @@ function renderHome() {
   const recentHTML = recent.length === 0 ? '' : recent.map(l => {
     const p = data.plants.find(p => p.id === l.plantId);
     if (!p) return '';
-    const cls = l.type === 'water' ? 'water' : l.type === 'fertilise' ? 'fert' : '';
-    const ico = l.type === 'water' ? icons.water : l.type === 'fertilise' ? icons.fert : icons.obs;
     return `
       <div class="log-entry" onclick="go('plant/${p.id}')">
-        <div class="log-icon ${cls}">${ico}</div>
+        <div class="log-icon ${logCls(l.type)}">${logIcon(l.type)}</div>
         <div class="log-body">
-          <div class="log-type">${l.type} · ${escape(p.name)}</div>
+          <div class="log-type">${logTypeLabel(l.type)} · ${escape(p.name)}</div>
           <div class="log-date">${relativeDay(l.date)}</div>
           ${l.notes ? `<div class="log-notes">"${escape(l.notes)}"</div>` : ''}
         </div>
-        ${l.healthScore != null ? `<div class="log-score">${l.healthScore}</div>` : ''}
+        ${logScoreBadge(l)}
       </div>`;
   }).join('');
 
@@ -1023,7 +1062,7 @@ function renderPlants() {
           ${p.species ? `<div class="plant-species">${escape(p.species)}</div>` : ''}
           <div class="plant-tags">
             ${p.location ? `<span class="tag">${escape(p.location)}</span>` : ''}
-            ${score != null ? `<span class="tag ${healthClass(score)}">Health ${score}/10</span>` : ''}
+            ${score != null ? `<span class="tag ${healthClass(score)}">Health ${score}</span>` : ''}
             ${lastWater ? `<span class="tag">💧 ${relativeDay(lastWater.date)}</span>` : ''}
           </div>
         </div>
@@ -1047,20 +1086,23 @@ function renderPlantDetail(id) {
   const wateringSince = lastWater ? daysAgo(lastWater.date) : daysAgo(p.acquired);
   const wateringWarn = p.wateringDays && wateringSince != null && wateringSince >= p.wateringDays;
 
-  // Health chart
-  const healthLogs = logs.filter(l => l.healthScore != null).reverse().slice(-12);
-  let chartHTML = '<div style="text-align:center;color:var(--ink-faint);font-size:13px;padding:20px 0;">Add observations with health scores to see the trend.</div>';
+  // Health chart — uses health-check logs with computed scores
+  const healthLogs = logs.filter(l => l.type === 'health-check' && l.visualScore != null).reverse().slice(-12);
+  let chartHTML = '<div style="text-align:center;color:var(--ink-faint);font-size:13px;padding:20px 0;">Log a health check to start tracking the trend.</div>';
   if (healthLogs.length >= 2) {
+    const scores = healthLogs.map(l => computeHealth(p, l.date, l.visualScore));
     const w = 320, h = 80, pad = 8;
     const xs = healthLogs.map((_, i) => pad + (i * (w - pad * 2) / (healthLogs.length - 1)));
-    const ys = healthLogs.map(l => h - pad - ((l.healthScore - 1) / 9) * (h - pad * 2));
+    const minS = Math.min(...scores), maxS = Math.max(...scores);
+    const range = maxS - minS || 1;
+    const ys = scores.map(s => h - pad - ((s - minS) / range) * (h - pad * 2));
     const path = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
     const area = `M${xs[0]},${h} L` + xs.map((x, i) => `${x},${ys[i]}`).join(' L') + ` L${xs[xs.length-1]},${h} Z`;
     chartHTML = `<svg class="chart-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-      <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4A6B3A" stop-opacity="0.25"/><stop offset="100%" stop-color="#4A6B3A" stop-opacity="0"/></linearGradient></defs>
+      <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--moss)" stop-opacity="0.25"/><stop offset="100%" stop-color="var(--moss)" stop-opacity="0"/></linearGradient></defs>
       <path d="${area}" fill="url(#g)"/>
-      <path d="${path}" stroke="#4A6B3A" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-      ${xs.map((x, i) => `<circle cx="${x}" cy="${ys[i]}" r="3" fill="#4A6B3A"/>`).join('')}
+      <path d="${path}" stroke="var(--moss)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      ${xs.map((x, i) => `<circle cx="${x}" cy="${ys[i]}" r="3" fill="var(--moss)"/>`).join('')}
     </svg>`;
   }
 
@@ -1072,7 +1114,7 @@ function renderPlantDetail(id) {
       ${p.species ? `<div class="detail-species">${escape(p.species)}</div>` : ''}
 
       <div class="stats-grid">
-        <div class="stat"><div class="stat-label">Health</div><div class="stat-value ${score != null && score < 5 ? 'warn' : ''}">${score != null ? score + ' / 10' : '—'}</div></div>
+        <div class="stat"><div class="stat-label">Health</div><div class="stat-value ${score != null && score < 1 ? 'warn' : ''}">${score != null ? score : '—'}</div></div>
         <div class="stat"><div class="stat-label">Location</div><div class="stat-value" style="font-size:14px;">${escape(p.location || '—')}</div></div>
         <div class="stat"><div class="stat-label">Last watered</div><div class="stat-value ${wateringWarn ? 'warn' : ''}" style="font-size:14px;">${lastWater ? relativeDay(lastWater.date) : 'Never'}</div></div>
         <div class="stat"><div class="stat-label">Last misted</div><div class="stat-value" style="font-size:14px;">${lastFert ? relativeDay(lastFert.date) : 'Never'}</div></div>
@@ -1097,16 +1139,14 @@ function renderPlantDetail(id) {
     <div class="section-title">History</div>
     ${logs.length === 0 ? `<div class="empty" style="padding:30px 0;"><p>No log entries yet.</p></div>` :
       `<div class="card" style="padding:4px 16px;">${logs.map(l => {
-        const cls = l.type === 'water' ? 'water' : l.type === 'fertilise' ? 'fert' : '';
-        const ico = l.type === 'water' ? icons.water : l.type === 'fertilise' ? icons.fert : icons.obs;
         return `<div class="log-entry">
-          <div class="log-icon ${cls}">${ico}</div>
+          <div class="log-icon ${logCls(l.type)}">${logIcon(l.type)}</div>
           <div class="log-body">
-            <div class="log-type">${l.type}</div>
+            <div class="log-type">${logTypeLabel(l.type)}</div>
             <div class="log-date">${fmtDate(l.date)}</div>
             ${l.notes ? `<div class="log-notes">"${escape(l.notes)}"</div>` : ''}
           </div>
-          ${l.healthScore != null ? `<div class="log-score">${l.healthScore}</div>` : ''}
+          ${logScoreBadge(l)}
         </div>`;
       }).join('')}</div>`
     }
@@ -1132,15 +1172,13 @@ function renderLogs() {
     return `<div class="section-title" style="margin-top:18px;">${fmtDate(date)}</div>
       <div class="card" style="padding:4px 16px;">${groups[date].map(l => {
         const p = data.plants.find(p => p.id === l.plantId);
-        const cls = l.type === 'water' ? 'water' : l.type === 'fertilise' ? 'fert' : '';
-        const ico = l.type === 'water' ? icons.water : l.type === 'fertilise' ? icons.fert : icons.obs;
         return `<div class="log-entry" onclick="${p ? `go('plant/${p.id}')` : ''}">
-          <div class="log-icon ${cls}">${ico}</div>
+          <div class="log-icon ${logCls(l.type)}">${logIcon(l.type)}</div>
           <div class="log-body">
-            <div class="log-type">${l.type} · ${p ? escape(p.name) : 'deleted plant'}</div>
+            <div class="log-type">${logTypeLabel(l.type)} · ${p ? escape(p.name) : 'deleted plant'}</div>
             ${l.notes ? `<div class="log-notes">"${escape(l.notes)}"</div>` : ''}
           </div>
-          ${l.healthScore != null ? `<div class="log-score">${l.healthScore}</div>` : ''}
+          ${logScoreBadge(l)}
         </div>`;
       }).join('')}</div>`;
   }).join('');
@@ -1193,7 +1231,7 @@ function renderSettings() {
 function quickLog(plantId, type) {
   data.logs.push({ id: uid(), plantId, type, date: today(), notes: '', healthScore: null });
   saveData();
-  toast(type === 'water' ? '💧 Logged' : type === 'fertilise' ? '✨ Logged' : 'Logged');
+  toast(type === 'water' ? '💧 Watered' : type === 'fertilise' ? '💦 Misted' : 'Logged');
   render();
 }
 
@@ -1361,13 +1399,14 @@ function openLogSheet(plantId) {
       <div class="seg" id="logType">
         <button data-v="water">Water</button>
         <button data-v="fertilise">Mist</button>
-        <button data-v="observation" class="active">Observe</button>
+        <button data-v="health-check" class="active">Health</button>
+        <button data-v="observation">Observe</button>
         <button data-v="repot">Repot</button>
       </div>
     </div>
     <div class="field"><label>Date</label><input type="date" id="f_date" value="${today()}"></div>
-    <div class="field">
-      <label>Health score</label>
+    <div class="field" id="healthSliderField">
+      <label>Visual health score</label>
       <div class="health-slider-wrap">
         <div class="health-slider-val" id="healthVal">7</div>
         <input type="range" id="f_health" min="1" max="10" value="7">
@@ -1376,17 +1415,18 @@ function openLogSheet(plantId) {
     </div>
     <div class="field"><label>Notes</label><textarea id="f_lognotes" placeholder="New leaf, soil moisture, pests, anything you noticed..."></textarea></div>
   `;
-  // segmented control
-  let logType = 'observation';
+  let logType = 'health-check';
+  const sliderField = document.getElementById('healthSliderField');
+  const updateSliderVisibility = () => { sliderField.style.display = logType === 'health-check' ? '' : 'none'; };
   document.querySelectorAll('#logType button').forEach(b => {
     b.onclick = () => {
       document.querySelectorAll('#logType button').forEach(x => x.classList.remove('active'));
       b.classList.add('active');
       logType = b.dataset.v;
+      updateSliderVisibility();
     };
   });
   window.__logType = () => logType;
-  // health slider
   const slider = document.getElementById('f_health');
   const valDisplay = document.getElementById('healthVal');
   slider.oninput = () => valDisplay.textContent = slider.value;
@@ -1396,12 +1436,12 @@ function openLogSheet(plantId) {
 function saveLog(plantId) {
   const type = window.__logType();
   const date = document.getElementById('f_date').value || today();
-  const healthScore = parseInt(document.getElementById('f_health').value);
   const notes = document.getElementById('f_lognotes').value.trim();
-  data.logs.push({ id: uid(), plantId, type, date, healthScore, notes });
+  const visualScore = type === 'health-check' ? parseInt(document.getElementById('f_health').value) : null;
+  data.logs.push({ id: uid(), plantId, type, date, visualScore, notes });
   saveData();
   closeSheet();
-  toast('Entry saved');
+  toast(type === 'health-check' ? '❤️ Health check saved' : 'Entry saved');
   render();
 }
 
