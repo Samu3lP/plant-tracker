@@ -1170,7 +1170,7 @@ function renderPlantDetail(id) {
   const score = getLatestHealth(p.id);
   const lastWater = getLastLog(p.id, 'water');
   const lastFert = getLastLog(p.id, 'fertilise');
-  const logs = data.logs.filter(l => l.plantId === p.id).sort((a, b) => b.date.localeCompare(a.date));
+  const logs = [...data.logs].filter(l => l.plantId === p.id).reverse().sort((a, b) => b.date.localeCompare(a.date));
   const photo = p.photo ? `style="background-image:url('${p.photo}')"` : '';
 
   const wateringSince = lastWater ? daysAgo(lastWater.date) : daysAgo(p.acquired);
@@ -1251,7 +1251,7 @@ function renderPlantDetail(id) {
 /* LOGS */
 function renderLogs() {
   setHeader(`<div><div class="header-sub">All entries</div><div class="header-title"><em>Log</em></div></div>`);
-  const logs = [...data.logs].sort((a, b) => b.date.localeCompare(a.date));
+  const logs = [...data.logs].reverse().sort((a, b) => b.date.localeCompare(a.date));
   if (logs.length === 0) {
     document.getElementById('view').innerHTML = `<div class="empty" style="margin-top:60px;"><div class="empty-icon">📓</div><h3>No entries yet</h3><p>Log a watering or observation from a plant's page.</p></div>`;
     return;
