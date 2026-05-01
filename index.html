@@ -263,8 +263,8 @@
   }
   .task-card:active { transform: scale(0.99); }
   .task-card + .task-card { margin-top: 8px; }
-  .task-card.overdue { border-left: 3px solid var(--terracotta); }
-  .task-card.due { border-left: 3px solid var(--moss-light); }
+  .task-card.water-task { border-left: 3px solid #3B82F6; }
+  .task-card.mist-task  { border-left: 3px solid #93C5FD; }
 
   .task-icon {
     width: 38px; height: 38px;
@@ -272,8 +272,9 @@
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
   }
-  .task-icon.water { background: #DDE7EE; color: #3D5A6E; }
-  .task-icon.fert { background: var(--terracotta-tint); color: var(--terracotta); }
+  .task-icon.water { background: #DBEAFE; color: #1D4ED8; }
+  .task-icon.mist  { background: #EFF6FF; color: #60A5FA; }
+  .task-icon.fert  { background: var(--terracotta-tint); color: var(--terracotta); }
   .task-icon svg { width: 18px; height: 18px; }
 
   .task-body { flex: 1; min-width: 0; }
@@ -289,7 +290,6 @@
     color: var(--ink-faint);
     margin-top: 2px;
   }
-  .task-meta.overdue { color: var(--terracotta); font-weight: 600; }
 
   .task-action {
     flex-shrink: 0;
@@ -894,21 +894,31 @@ function getOverdueTasks() {
   for (const p of data.plants) {
     if (p.wateringDays) {
       const last = getLastLog(p.id, 'water');
-      const since = last ? daysAgo(last.date) : daysAgo(p.acquired);
-      if (since != null && since >= p.wateringDays) {
-        tasks.push({ plant: p, type: 'water', since, interval: p.wateringDays });
+      if (!last) {
+        tasks.push({ plant: p, type: 'water', since: 9999, interval: p.wateringDays, neverDone: true });
+      } else {
+        const since = daysAgo(last.date);
+        if (since != null && since >= p.wateringDays)
+          tasks.push({ plant: p, type: 'water', since, interval: p.wateringDays });
       }
     }
     if (p.mistsPerWeek) {
       const last = getLastLog(p.id, 'fertilise');
-      const since = last ? daysAgo(last.date) : daysAgo(p.acquired);
       const interval = Math.round(7 / p.mistsPerWeek);
-      if (since != null && since >= interval) {
-        tasks.push({ plant: p, type: 'fertilise', since, interval });
+      if (!last) {
+        tasks.push({ plant: p, type: 'fertilise', since: 9999, interval, neverDone: true });
+      } else {
+        const since = daysAgo(last.date);
+        if (since != null && since >= interval)
+          tasks.push({ plant: p, type: 'fertilise', since, interval });
       }
     }
   }
-  return tasks.sort((a, b) => (b.since - b.interval) - (a.since - a.interval));
+  return tasks.sort((a, b) => {
+    const va = a.neverDone ? 9999 : a.since - a.interval;
+    const vb = b.neverDone ? 9999 : b.since - b.interval;
+    return vb - va;
+  });
 }
 function healthClass(score) {
   if (score == null) return '';
@@ -944,6 +954,7 @@ const icons = {
   leaf: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 014 13V8a8 8 0 018-8h0a8 8 0 018 8 13 13 0 01-9 12.5"/><path d="M2 22c0-3 6-7 10-7"/></svg>',
   water: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l5 6.5a6.5 6.5 0 11-10 0z"/></svg>',
   fert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></svg>',
+  mist: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 17.58A5 5 0 0018 8h-1.26A8 8 0 104 15.25"/><line x1="8" y1="19" x2="8" y2="21"/><line x1="12" y1="17" x2="12" y2="19"/><line x1="16" y1="19" x2="16" y2="21"/></svg>',
   obs: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
   healthcheck: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
   back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
@@ -1055,13 +1066,17 @@ function renderHome() {
   const tasksHTML = tasks.length === 0
     ? `<div class="card" style="text-align:center;padding:24px;"><div style="font-family:'Fraunces',serif;font-style:italic;color:var(--ink-soft);font-size:18px;">All caught up</div><div style="font-size:13px;color:var(--ink-faint);margin-top:4px;">Nothing needs your attention today.</div></div>`
     : tasks.map(t => {
-        const overdue = t.since > t.interval;
+        const isWater = t.type === 'water';
+        const overdueDays = t.neverDone ? null : t.since - t.interval;
+        const meta = t.neverDone
+          ? (isWater ? 'Never watered' : 'Never misted')
+          : overdueDays > 0 ? `${overdueDays}d overdue` : 'due today';
         return `
-        <div class="task-card ${overdue ? 'overdue' : 'due'}" onclick="go('plant/${t.plant.id}')">
-          <div class="task-icon ${t.type === 'water' ? 'water' : 'fert'}">${t.type === 'water' ? icons.water : icons.fert}</div>
+        <div class="task-card ${isWater ? 'water-task' : 'mist-task'}" onclick="go('plant/${t.plant.id}')">
+          <div class="task-icon ${isWater ? 'water' : 'mist'}">${isWater ? icons.water : icons.mist}</div>
           <div class="task-body">
-            <div class="task-title">${escape(t.plant.name)}</div>
-            <div class="task-meta ${overdue ? 'overdue' : ''}">${t.type === 'water' ? 'Water' : 'Fertilise'} · ${t.since - t.interval > 0 ? `${t.since - t.interval}d overdue` : 'due today'}</div>
+            <div class="task-title">${isWater ? 'Water' : 'Mist'} ${escape(t.plant.name)}</div>
+            <div class="task-meta">${meta}</div>
           </div>
           <button class="task-action" onclick="event.stopPropagation(); quickLog('${t.plant.id}', '${t.type}')">Done</button>
         </div>`;
