@@ -463,6 +463,23 @@
   .health-bar-fill.low { background: #E63946; }
   .plant-health-bar { height: 5px; background: var(--divider); border-radius: 3px; overflow: hidden; margin-top: 8px; }
 
+  .home-plant-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px; cursor: pointer; transition: background 0.1s;
+  }
+  .home-plant-row:active { background: var(--surface-2); }
+  .home-plant-row + .home-plant-row { border-top: 1px solid var(--divider); }
+  .home-plant-thumb {
+    width: 42px; height: 42px; border-radius: var(--radius-sm); flex-shrink: 0;
+    background: var(--surface-2) center/cover no-repeat;
+    display: flex; align-items: center; justify-content: center; color: var(--ink-faint);
+  }
+  .home-plant-thumb svg { width: 18px; height: 18px; }
+  .home-health-num {
+    font-family: 'Fraunces', serif; font-size: 16px; font-weight: 500;
+    color: var(--ink); flex-shrink: 0; min-width: 30px; text-align: right;
+  }
+
   .actions-row {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -1066,6 +1083,27 @@ function renderHome() {
       </div>`;
   }).join('');
 
+  const sortedPlants = [...data.plants].sort((a, b) => {
+    const sa = getLatestHealth(a.id), sb = getLatestHealth(b.id);
+    if (sa == null && sb == null) return 0;
+    if (sa == null) return 1;
+    if (sb == null) return -1;
+    return sa - sb;
+  });
+  const plantsHTML = sortedPlants.map(p => {
+    const score = getLatestHealth(p.id);
+    const thumb = p.photo ? `style="background-image:url('${p.photo}')"` : '';
+    return `
+      <div class="home-plant-row" onclick="go('plant/${p.id}')">
+        <div class="home-plant-thumb" ${thumb}>${!p.photo ? icons.leaf : ''}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:13px;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escape(p.name)}</div>
+          ${healthBarHTML(score, true)}
+        </div>
+        <div class="home-health-num">${score != null ? score : '—'}</div>
+      </div>`;
+  }).join('');
+
   setHeader(`<div><div class="header-sub">${new Date().toLocaleDateString('en-GB', { weekday: 'long' })}</div><div class="header-title"><em>Garden</em></div></div>`);
 
   document.getElementById('view').innerHTML = `
@@ -1077,14 +1115,14 @@ function renderHome() {
     <div class="section-title">Today's tasks</div>
     ${tasksHTML}
 
-    ${recent.length > 0 ? `<div class="section-title">Recent activity</div><div class="card" style="padding:4px 16px;">${recentHTML}</div>` : ''}
-
-    ${data.plants.length === 0 ? `
+    ${data.plants.length > 0 ? `<div class="section-title">Plants</div><div class="card" style="padding:4px 0;">${plantsHTML}</div>` : `
       <div class="empty">
         <div class="empty-icon">🌱</div>
         <h3>No plants yet</h3>
         <p>Tap the + button below to add your first one.</p>
-      </div>` : ''}
+      </div>`}
+
+    ${recent.length > 0 ? `<div class="section-title">Recent activity</div><div class="card" style="padding:4px 16px;">${recentHTML}</div>` : ''}
   `;
 }
 
