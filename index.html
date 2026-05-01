@@ -842,7 +842,7 @@ function computeHealth(plant, atDate, visualScore) {
       .filter(l => l.plantId === plant.id && l.type === 'water' && l.date <= atDate)
       .sort((a, b) => b.date.localeCompare(a.date))[0];
     const since = lastWater ? daysBetween(lastWater.date, atDate) : daysBetween(plant.acquired || atDate, atDate);
-    if (since >= plant.wateringDays) waterPenalty = -since;
+    if (since >= plant.wateringDays) waterPenalty = -(since - plant.wateringDays);
   }
   let mistPenalty = 0;
   if (plant.mistsPerWeek) {
@@ -850,7 +850,7 @@ function computeHealth(plant, atDate, visualScore) {
       .filter(l => l.plantId === plant.id && l.type === 'fertilise' && l.date <= atDate)
       .sort((a, b) => b.date.localeCompare(a.date))[0];
     const since = lastMist ? daysBetween(lastMist.date, atDate) : 999;
-    if (since >= 7) mistPenalty = -0.25 * since;
+    if (since >= 7) mistPenalty = -0.25 * (since - 7);
   }
   return parseFloat(((waterPenalty + mistPenalty + visualScore) / 3).toFixed(1));
 }
