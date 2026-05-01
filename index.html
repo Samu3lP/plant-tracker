@@ -456,6 +456,13 @@
   }
   .stat-value.warn { color: var(--terracotta); }
 
+  .health-bar { height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; margin-top: 8px; }
+  .health-bar-fill { height: 100%; border-radius: 4px; }
+  .health-bar-fill.good { background: #52B788; }
+  .health-bar-fill.mid { background: #F4A261; }
+  .health-bar-fill.low { background: #E63946; }
+  .plant-health-bar { height: 5px; background: var(--divider); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+
   .actions-row {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -852,7 +859,7 @@ function computeHealth(plant, atDate, visualScore) {
     const since = lastMist ? daysBetween(lastMist.date, atDate) : 999;
     if (since >= 7) mistPenalty = -0.25 * (since - 7);
   }
-  return parseFloat(((waterPenalty + mistPenalty + visualScore) / 3).toFixed(1));
+  return Math.round(((waterPenalty + mistPenalty + visualScore) / 3) * 10);
 }
 function getLatestHealth(plantId) {
   const plant = data.plants.find(p => p.id === plantId);
@@ -886,9 +893,17 @@ function getOverdueTasks() {
 }
 function healthClass(score) {
   if (score == null) return '';
-  if (score >= 2.5) return 'health-good';
-  if (score >= 1) return 'health-mid';
+  if (score > 75) return 'health-good';
+  if (score >= 25) return 'health-mid';
   return 'health-low';
+}
+function healthBarHTML(score, small = false) {
+  if (score == null) return '';
+  const pct = Math.max(0, Math.min(100, score));
+  const cls = score > 75 ? 'good' : score >= 25 ? 'mid' : 'low';
+  return small
+    ? `<div class="plant-health-bar"><div class="health-bar-fill ${cls}" style="width:${pct}%"></div></div>`
+    : `<div class="health-bar"><div class="health-bar-fill ${cls}" style="width:${pct}%"></div></div>`;
 }
 function logTypeLabel(t) {
   return { water: 'Watered', fertilise: 'Misted', 'health-check': 'Health check', observation: 'Observation', repot: 'Repotted' }[t] || t;
@@ -1062,9 +1077,9 @@ function renderPlants() {
           ${p.species ? `<div class="plant-species">${escape(p.species)}</div>` : ''}
           <div class="plant-tags">
             ${p.location ? `<span class="tag">${escape(p.location)}</span>` : ''}
-            ${score != null ? `<span class="tag ${healthClass(score)}">Health ${score}</span>` : ''}
             ${lastWater ? `<span class="tag">💧 ${relativeDay(lastWater.date)}</span>` : ''}
           </div>
+          ${score != null ? `<div style="display:flex;align-items:center;gap:8px;margin-top:6px;"><span style="font-size:11px;font-weight:600;color:var(--ink-faint);min-width:28px;">Health</span>${healthBarHTML(score, true)}<span style="font-size:11px;font-weight:700;color:var(--ink-soft);">${score}</span></div>` : ''}
         </div>
       </div>`;
   }).join('');
@@ -1114,7 +1129,7 @@ function renderPlantDetail(id) {
       ${p.species ? `<div class="detail-species">${escape(p.species)}</div>` : ''}
 
       <div class="stats-grid">
-        <div class="stat"><div class="stat-label">Health</div><div class="stat-value ${score != null && score < 1 ? 'warn' : ''}">${score != null ? score : '—'}</div></div>
+        <div class="stat"><div class="stat-label">Health</div><div class="stat-value ${score != null && score < 25 ? 'warn' : ''}">${score != null ? score : '—'}</div>${healthBarHTML(score)}</div>
         <div class="stat"><div class="stat-label">Location</div><div class="stat-value" style="font-size:14px;">${escape(p.location || '—')}</div></div>
         <div class="stat"><div class="stat-label">Last watered</div><div class="stat-value ${wateringWarn ? 'warn' : ''}" style="font-size:14px;">${lastWater ? relativeDay(lastWater.date) : 'Never'}</div></div>
         <div class="stat"><div class="stat-label">Last misted</div><div class="stat-value" style="font-size:14px;">${lastFert ? relativeDay(lastFert.date) : 'Never'}</div></div>
