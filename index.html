@@ -938,6 +938,41 @@ const icons = {
 };
 
 /* ---------- AI IDENTIFICATION ---------- */
+async function rateHealthFromImage(base64Image) {
+  const key = getApiKey();
+  if (!key) throw new Error('no-key');
+  const mediaType = base64Image.match(/data:([^;]+);base64,/)?.[1] || 'image/jpeg';
+  const imgData = base64Image.split(',')[1];
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 128,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data: imgData } },
+          { type: 'text', text: 'Rate this plant\'s visual health out of 10. Reply with raw JSON only (no markdown):\n{"score":<integer 1-10>,"notes":"<one sentence describing what you observe>"}\n10 = thriving, 1 = severely struggling. Consider leaf colour, wilting, yellowing, pests, and overall vigour.' }
+        ]
+      }]
+    })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `API error ${res.status}`);
+  }
+  const json = await res.json();
+  const text = json.content[0].text.replace(/```[a-z]*\n?/gi, '').trim();
+  const parsed = JSON.parse(text);
+  return { score: Math.min(10, Math.max(1, Math.round(parsed.score))), notes: parsed.notes || '' };
+}
+
 async function identifyPlant(base64Image) {
   const key = getApiKey();
   if (!key) { alert('Add your Claude API key in Settings first.'); return null; }
@@ -1137,9 +1172,10 @@ function renderPlantDetail(id) {
         <div class="stat"><div class="stat-label">Last misted</div><div class="stat-value" style="font-size:14px;">${lastFert ? relativeDay(lastFert.date) : 'Never'}</div></div>
       </div>
 
-      <div class="actions-row">
+      <div class="actions-row" style="grid-template-columns:repeat(4,1fr);">
         <button class="action-btn" onclick="quickLog('${p.id}', 'water')">${icons.water}<span>Watered</span></button>
         <button class="action-btn" onclick="quickLog('${p.id}', 'fertilise')">${icons.fert}<span>Misted</span></button>
+        <button class="action-btn" onclick="openHealthCheckSheet('${p.id}')">${icons.healthcheck}<span>Health</span></button>
         <button class="action-btn" onclick="openLogSheet('${p.id}')">${icons.obs}<span>Note</span></button>
       </div>
       <div class="actions-row" style="grid-template-columns:1fr 1fr;">
@@ -1400,6 +1436,75 @@ function savePlant(id) {
   toast(id ? 'Updated' : 'Plant added');
   if (!id) go('plant/' + obj.id);
   else render();
+}
+
+function openHealthCheckSheet(plantId) {
+  const p = data.plants.find(p => p.id === plantId);
+  if (!p) return;
+  document.getElementById('sheetHeader').innerHTML = `
+    <button class="sheet-close" onclick="closeSheet()">Cancel</button>
+    <h2>Health check</h2>
+    <button class="sheet-save" onclick="saveHealthCheck('${plantId}')">Save</button>`;
+  document.getElementById('sheetBody').innerHTML = `
+    <div style="font-family:'Fraunces',serif;font-style:italic;color:var(--ink-soft);margin-bottom:18px;text-align:center;">for ${escape(p.name)}</div>
+    <div class="field">
+      <label>Photo for AI rating (optional)</label>
+      <div id="hcPhoto" class="photo-input">
+        ${icons.camera}<span>Tap to photograph your plant</span>
+      </div>
+      <input type="file" id="hcFile" accept="image/*" capture="environment" style="display:none">
+      <div id="hcStatus" style="display:none;text-align:center;padding:10px 0;font-size:13px;color:var(--ink-faint);">Analysing with AI…</div>
+      <div id="hcError" style="display:none;text-align:center;padding:6px 0;font-size:12px;color:var(--terracotta);"></div>
+    </div>
+    <div class="field">
+      <label>Visual health score</label>
+      <div class="health-slider-wrap">
+        <div class="health-slider-val" id="hcVal">7</div>
+        <input type="range" id="hc_health" min="1" max="10" value="7">
+        <div class="slider-scale"><span>Struggling</span><span>Thriving</span></div>
+      </div>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="hc_notes" placeholder="Anything you noticed…"></textarea></div>
+  `;
+  const photoEl = document.getElementById('hcPhoto');
+  const fileEl  = document.getElementById('hcFile');
+  const status  = document.getElementById('hcStatus');
+  const errEl   = document.getElementById('hcError');
+  const slider  = document.getElementById('hc_health');
+  const valEl   = document.getElementById('hcVal');
+  slider.oninput = () => valEl.textContent = slider.value;
+  photoEl.onclick = () => fileEl.click();
+  fileEl.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const b64 = await compressImage(file);
+    photoEl.style.cssText += `;background-image:url('${b64}');background-size:cover;background-position:center;`;
+    photoEl.innerHTML = '';
+    errEl.style.display = 'none';
+    status.style.display = 'block';
+    try {
+      const result = await rateHealthFromImage(b64);
+      slider.value = result.score;
+      valEl.textContent = result.score;
+      if (result.notes) document.getElementById('hc_notes').value = result.notes;
+    } catch (err) {
+      errEl.textContent = err.message === 'no-key' ? 'Add a Claude API key in Settings to use AI rating.' : 'AI rating failed — set score manually.';
+      errEl.style.display = 'block';
+    } finally {
+      status.style.display = 'none';
+    }
+  };
+  openSheet();
+}
+
+function saveHealthCheck(plantId) {
+  const visualScore = parseInt(document.getElementById('hc_health').value);
+  const notes = document.getElementById('hc_notes').value.trim();
+  data.logs.push({ id: uid(), plantId, type: 'health-check', date: today(), visualScore, notes });
+  saveData();
+  closeSheet();
+  toast('❤️ Health check saved');
+  render();
 }
 
 function openLogSheet(plantId) {
