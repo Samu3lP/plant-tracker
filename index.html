@@ -1098,7 +1098,7 @@ async function rateHealthFromImage(base64Image, withDiagnosis = false) {
   const mediaType = base64Image.match(/data:([^;]+);base64,/)?.[1] || 'image/jpeg';
   const imgData = base64Image.split(',')[1];
   const prompt = withDiagnosis
-    ? 'Rate this plant\'s visual health and provide a diagnosis. Reply with raw JSON only (no markdown):\n{"score":<integer 1-10>,"notes":"<one sentence observation>","diagnosis":"<2-4 sentences covering: what you observe, likely issues or causes, and care recommendations>"}\n10 = thriving, 1 = severely struggling. Consider leaf colour, wilting, yellowing, pests, and overall vigour.'
+    ? 'Rate this plant\'s visual health and provide a diagnosis. Reply with raw JSON only (no markdown):\n{"score":<integer 1-10>,"notes":"<one sentence observation>","diagnosis":"<3-5 sentences: (1) what you observe, (2) likely cause, (3) 2-3 concrete actionable steps the owner can take right now to help the plant recover or maintain its health>"}\n10 = thriving, 1 = severely struggling. Consider leaf colour, wilting, yellowing, pests, and overall vigour.'
     : 'Rate this plant\'s visual health out of 10. Reply with raw JSON only (no markdown):\n{"score":<integer 1-10>,"notes":"<one sentence describing what you observe>"}\n10 = thriving, 1 = severely struggling. Consider leaf colour, wilting, yellowing, pests, and overall vigour.';
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
