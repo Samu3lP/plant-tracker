@@ -126,7 +126,7 @@
     color: #fff;
   }
   .header-title em {
-    font-style: italic;
+    font-style: normal;
     font-weight: 400;
     color: rgba(255, 255, 255, 0.8);
   }
@@ -208,7 +208,7 @@
     margin-bottom: 4px;
   }
   .greeting h1 em {
-    font-style: italic;
+    font-style: normal;
     color: var(--moss);
     font-weight: 400;
   }
@@ -341,7 +341,7 @@
     font-variation-settings: 'opsz' 24;
   }
   .plant-species {
-    font-style: italic;
+    font-style: normal;
     font-size: 12px;
     color: var(--ink-faint);
     font-family: 'Fraunces', serif;
@@ -376,7 +376,7 @@
     opacity: 0.5;
   }
   .empty h3 {
-    font-style: italic;
+    font-style: normal;
     font-weight: 400;
     color: var(--ink-soft);
     margin-bottom: 6px;
@@ -388,6 +388,7 @@
     margin: 0 -22px 20px;
     padding: 0 22px 24px;
     border-bottom: 1px solid var(--divider);
+    position: relative;
   }
   .back-btn {
     display: inline-flex; align-items: center; gap: 6px;
@@ -423,7 +424,7 @@
   }
   .detail-species {
     font-family: 'Fraunces', serif;
-    font-style: italic;
+    font-style: normal;
     font-size: 16px;
     color: var(--ink-faint);
     margin-bottom: 16px;
@@ -500,6 +501,61 @@
   .action-btn:active { background: var(--moss-tint); transform: scale(0.97); }
   .action-btn svg { width: 18px; height: 18px; color: var(--moss); }
 
+  .plant-menu-btn {
+    position: absolute;
+    bottom: 24px;
+    right: 22px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--divider);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-soft);
+    cursor: pointer;
+    padding: 0;
+  }
+  .plant-menu-btn svg { width: 18px; height: 18px; }
+  .plant-menu-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.32);
+    z-index: 199;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .plant-menu-overlay.open { opacity: 1; pointer-events: all; }
+  .plant-side-menu {
+    position: fixed;
+    top: 0;
+    right: -280px;
+    width: 260px;
+    height: 100%;
+    background: var(--bg);
+    z-index: 200;
+    transition: right 0.25s ease;
+    padding: 64px 0 40px;
+    box-shadow: -4px 0 24px rgba(0,0,0,0.13);
+    overflow-y: auto;
+  }
+  .plant-side-menu.open { right: 0; }
+  .menu-action {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 15px 24px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--ink);
+    border-bottom: 1px solid var(--divider);
+  }
+  .menu-action:active { background: var(--surface); }
+  .menu-action svg { width: 20px; height: 20px; color: var(--moss); flex-shrink: 0; }
+  .menu-action.danger { color: var(--terracotta); }
+  .menu-action.danger svg { color: var(--terracotta); }
+
   /* Health chart */
   .chart-wrap {
     background: var(--surface);
@@ -556,7 +612,7 @@
     font-size: 14px;
     color: var(--ink-soft);
     margin-top: 4px;
-    font-style: italic;
+    font-style: normal;
     font-family: 'Fraunces', serif;
     font-variation-settings: 'opsz' 14;
   }
@@ -903,14 +959,22 @@ function getOverdueTasks() {
       }
     }
     if (p.mistsPerWeek) {
-      const last = getLastLog(p.id, 'fertilise');
-      const interval = Math.round(7 / p.mistsPerWeek);
-      if (!last) {
-        tasks.push({ plant: p, type: 'fertilise', since: 9999, interval, neverDone: true });
-      } else {
-        const since = daysAgo(last.date);
-        if (since != null && since >= interval)
-          tasks.push({ plant: p, type: 'fertilise', since, interval });
+      const n = p.mistsPerWeek;
+      const w = p.wateringDays || 7;
+      const lastWater = getLastLog(p.id, 'water');
+      const cycleStart = lastWater ? lastWater.date : (p.acquired || today());
+      const daysSinceCycle = daysAgo(cycleStart) || 0;
+      const mistsInCycle = data.logs.filter(l =>
+        l.plantId === p.id && l.type === 'fertilise' && l.date >= cycleStart
+      ).length;
+      let slotsPassed = 0, oldestSlotDay = null;
+      for (let a = 1; a <= n; a++) {
+        const targetDay = Math.max(1, Math.round(a * w / (n + 1)));
+        if (daysSinceCycle >= targetDay) { slotsPassed++; if (oldestSlotDay === null) oldestSlotDay = targetDay; }
+      }
+      if (slotsPassed > mistsInCycle) {
+        const hasEverMisted = data.logs.some(l => l.plantId === p.id && l.type === 'fertilise');
+        tasks.push({ plant: p, type: 'fertilise', since: daysSinceCycle, interval: oldestSlotDay || 0, neverDone: !hasEverMisted });
       }
     }
   }
@@ -963,6 +1027,8 @@ const icons = {
   download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>',
   upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>',
   trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>',
+  edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+  more: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>',
 };
 
 /* ---------- AI IDENTIFICATION ---------- */
@@ -1064,7 +1130,7 @@ function renderHome() {
   const greet = hr < 5 ? 'Late night' : hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening';
   const tasks = getOverdueTasks();
   const tasksHTML = tasks.length === 0
-    ? `<div class="card" style="text-align:center;padding:24px;"><div style="font-family:'Fraunces',serif;font-style:italic;color:var(--ink-soft);font-size:18px;">All caught up</div><div style="font-size:13px;color:var(--ink-faint);margin-top:4px;">Nothing needs your attention today.</div></div>`
+    ? `<div class="card" style="text-align:center;padding:24px;"><div style="font-family:'Fraunces',serif;color:var(--ink-soft);font-size:18px;">All caught up</div><div style="font-size:13px;color:var(--ink-faint);margin-top:4px;">Nothing needs your attention today.</div></div>`
     : tasks.map(t => {
         const isWater = t.type === 'water';
         const overdueDays = t.neverDone ? null : t.since - t.interval;
@@ -1119,11 +1185,11 @@ function renderHome() {
       </div>`;
   }).join('');
 
-  setHeader(`<div><div class="header-sub">${new Date().toLocaleDateString('en-GB', { weekday: 'long' })}</div><div class="header-title"><em>Garden</em></div></div>`);
+  setHeader(`<div><div class="header-sub">${new Date().toLocaleDateString('en-GB', { weekday: 'long' })}</div><div class="header-title">Garden</div></div>`);
 
   document.getElementById('view').innerHTML = `
     <div class="greeting">
-      <h1>${greet}, <em>Samuel</em></h1>
+      <h1>${greet}, Samuel</h1>
       <div class="date">${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
     </div>
 
@@ -1143,7 +1209,7 @@ function renderHome() {
 
 /* PLANTS LIST */
 function renderPlants() {
-  setHeader(`<div><div class="header-sub">${data.plants.length} ${data.plants.length === 1 ? 'plant' : 'plants'}</div><div class="header-title"><em>My plants</em></div></div>`);
+  setHeader(`<div><div class="header-sub">${data.plants.length} ${data.plants.length === 1 ? 'plant' : 'plants'}</div><div class="header-title">My plants</div></div>`);
 
   if (data.plants.length === 0) {
     document.getElementById('view').innerHTML = `
@@ -1193,18 +1259,56 @@ function renderPlants() {
 }
 
 /* PLANT DETAIL */
+function getNextWaterLabel(plant) {
+  if (!plant.wateringDays) return { label: '—', warn: false };
+  const lastWater = getLastLog(plant.id, 'water');
+  if (!lastWater) return { label: 'Now', warn: true };
+  const daysLeft = plant.wateringDays - (daysAgo(lastWater.date) || 0);
+  if (daysLeft <= 0) return { label: 'Overdue', warn: true };
+  if (daysLeft === 1) return { label: 'Tomorrow', warn: false };
+  return { label: `in ${daysLeft}d`, warn: false };
+}
+
+function getNextMistLabel(plant) {
+  const n = plant.mistsPerWeek;
+  if (!n) return { label: '—', warn: false };
+  const w = plant.wateringDays || 7;
+  const lastWater = getLastLog(plant.id, 'water');
+  const cycleStart = lastWater ? lastWater.date : (plant.acquired || today());
+  const daysSinceCycle = daysAgo(cycleStart) || 0;
+  const mistsInCycle = data.logs.filter(l =>
+    l.plantId === plant.id && l.type === 'fertilise' && l.date >= cycleStart
+  ).length;
+  const slots = [];
+  for (let a = 1; a <= n; a++) slots.push(Math.max(1, Math.round(a * w / (n + 1))));
+  if (slots.filter(s => daysSinceCycle >= s).length > mistsInCycle) return { label: 'Overdue', warn: true };
+  const nextIdx = mistsInCycle;
+  const daysLeft = nextIdx < slots.length
+    ? slots[nextIdx] - daysSinceCycle
+    : Math.max(0, w - daysSinceCycle) + slots[0];
+  if (daysLeft <= 0) return { label: 'Now', warn: true };
+  if (daysLeft === 1) return { label: 'Tomorrow', warn: false };
+  return { label: `in ${daysLeft}d`, warn: false };
+}
+
+function openPlantMenu() {
+  document.getElementById('plantMenuOverlay').classList.add('open');
+  document.getElementById('plantSideMenu').classList.add('open');
+}
+function closePlantMenu() {
+  document.getElementById('plantMenuOverlay').classList.remove('open');
+  document.getElementById('plantSideMenu').classList.remove('open');
+}
+
 function renderPlantDetail(id) {
   const p = data.plants.find(p => p.id === id);
   if (!p) { go('plants'); return; }
   setHeader('');
   const score = getLatestHealth(p.id);
-  const lastWater = getLastLog(p.id, 'water');
-  const lastFert = getLastLog(p.id, 'fertilise');
   const logs = [...data.logs].filter(l => l.plantId === p.id).reverse().sort((a, b) => b.date.localeCompare(a.date));
   const photo = p.photo ? `style="background-image:url('${p.photo}')"` : '';
-
-  const wateringSince = lastWater ? daysAgo(lastWater.date) : daysAgo(p.acquired);
-  const wateringWarn = p.wateringDays && wateringSince != null && wateringSince >= p.wateringDays;
+  const nextWater = getNextWaterLabel(p);
+  const nextMist = getNextMistLabel(p);
 
   // Health chart — uses health-check logs with computed scores
   const healthLogs = logs.filter(l => l.type === 'health-check' && l.visualScore != null).reverse().slice(-12);
@@ -1236,20 +1340,21 @@ function renderPlantDetail(id) {
       <div class="stats-grid">
         <div class="stat"><div class="stat-label">Health</div><div class="stat-value ${score != null && score < 25 ? 'warn' : ''}">${score != null ? score : '—'}</div>${healthBarHTML(score)}</div>
         <div class="stat"><div class="stat-label">Location</div><div class="stat-value" style="font-size:14px;">${escape(p.location || '—')}</div></div>
-        <div class="stat"><div class="stat-label">Last watered</div><div class="stat-value ${wateringWarn ? 'warn' : ''}" style="font-size:14px;">${lastWater ? relativeDay(lastWater.date) : 'Never'}</div></div>
-        <div class="stat"><div class="stat-label">Last misted</div><div class="stat-value" style="font-size:14px;">${lastFert ? relativeDay(lastFert.date) : 'Never'}</div></div>
+        <div class="stat"><div class="stat-label">Next water</div><div class="stat-value ${nextWater.warn ? 'warn' : ''}" style="font-size:14px;">${nextWater.label}</div></div>
+        <div class="stat"><div class="stat-label">Next mist</div><div class="stat-value ${nextMist.warn ? 'warn' : ''}" style="font-size:14px;">${nextMist.label}</div></div>
       </div>
 
-      <div class="actions-row" style="grid-template-columns:repeat(4,1fr);">
-        <button class="action-btn" onclick="quickLog('${p.id}', 'water')">${icons.water}<span>Watered</span></button>
-        <button class="action-btn" onclick="quickLog('${p.id}', 'fertilise')">${icons.fert}<span>Misted</span></button>
-        <button class="action-btn" onclick="openHealthCheckSheet('${p.id}')">${icons.healthcheck}<span>Health</span></button>
-        <button class="action-btn" onclick="openLogSheet('${p.id}')">${icons.obs}<span>Note</span></button>
-      </div>
-      <div class="actions-row" style="grid-template-columns:1fr 1fr;">
-        <button class="action-btn" onclick="openPlantSheet('${p.id}')" style="font-size:12px;">Edit details</button>
-        <button class="action-btn" onclick="deletePlant('${p.id}')" style="color:var(--terracotta);">${icons.trash}<span>Delete</span></button>
-      </div>
+      <button class="plant-menu-btn" onclick="openPlantMenu()">${icons.more}</button>
+    </div>
+
+    <div class="plant-menu-overlay" id="plantMenuOverlay" onclick="closePlantMenu()"></div>
+    <div class="plant-side-menu" id="plantSideMenu">
+      <div class="menu-action" onclick="closePlantMenu(); quickLog('${p.id}', 'water')">${icons.water}<span>Watered</span></div>
+      <div class="menu-action" onclick="closePlantMenu(); quickLog('${p.id}', 'fertilise')">${icons.mist}<span>Misted</span></div>
+      <div class="menu-action" onclick="closePlantMenu(); openHealthCheckSheet('${p.id}')">${icons.healthcheck}<span>Health check</span></div>
+      <div class="menu-action" onclick="closePlantMenu(); openLogSheet('${p.id}')">${icons.obs}<span>Add note</span></div>
+      <div class="menu-action" onclick="closePlantMenu(); openPlantSheet('${p.id}')">${icons.edit}<span>Edit details</span></div>
+      <div class="menu-action danger" onclick="closePlantMenu(); deletePlant('${p.id}')">${icons.trash}<span>Delete plant</span></div>
     </div>
 
     <div class="chart-wrap">
@@ -1272,15 +1377,15 @@ function renderPlantDetail(id) {
       }).join('')}</div>`
     }
 
-    ${p.notes ? `<div class="section-title">Notes</div><div class="card"><div style="font-family:'Fraunces',serif;font-style:italic;color:var(--ink-soft);font-variation-settings:'opsz' 18;">${escape(p.notes)}</div></div>` : ''}
+    ${p.notes ? `<div class="section-title">Notes</div><div class="card"><div style="font-family:'Fraunces',serif;color:var(--ink-soft);font-variation-settings:'opsz' 18;">${escape(p.notes)}</div></div>` : ''}
 
-    ${p.acquired ? `<div style="text-align:center;color:var(--ink-faint);font-size:12px;margin-top:24px;font-style:italic;">Acquired ${fmtDate(p.acquired)}</div>` : ''}
+    ${p.acquired ? `<div style="text-align:center;color:var(--ink-faint);font-size:12px;margin-top:24px;">Acquired ${fmtDate(p.acquired)}</div>` : ''}
   `;
 }
 
 /* LOGS */
 function renderLogs() {
-  setHeader(`<div><div class="header-sub">All entries</div><div class="header-title"><em>Log</em></div></div>`);
+  setHeader(`<div><div class="header-sub">All entries</div><div class="header-title">Log</div></div>`);
   const logs = [...data.logs].reverse().sort((a, b) => b.date.localeCompare(a.date));
   if (logs.length === 0) {
     document.getElementById('view').innerHTML = `<div class="empty" style="margin-top:60px;"><div class="empty-icon">📓</div><h3>No entries yet</h3><p>Log a watering or observation from a plant's page.</p></div>`;
@@ -1308,7 +1413,7 @@ function renderLogs() {
 
 /* SETTINGS */
 function renderSettings() {
-  setHeader(`<div><div class="header-sub">App</div><div class="header-title"><em>Settings</em></div></div>`);
+  setHeader(`<div><div class="header-sub">App</div><div class="header-title">Settings</div></div>`);
   document.getElementById('view').innerHTML = `
     <div class="section-title">AI</div>
     <div class="card" style="padding:16px;">
@@ -1344,7 +1449,7 @@ function renderSettings() {
       ${icons.trash}
     </button>
 
-    <div style="text-align:center;color:var(--ink-faint);font-size:12px;margin-top:32px;font-style:italic;font-family:'Fraunces',serif;">Garden · v1.0</div>
+    <div style="text-align:center;color:var(--ink-faint);font-size:12px;margin-top:32px;font-family:'Fraunces',serif;">Garden · v1.0</div>
   `;
 }
 
@@ -1514,7 +1619,7 @@ function openHealthCheckSheet(plantId) {
     <h2>Health check</h2>
     <button class="sheet-save" onclick="saveHealthCheck('${plantId}')">Save</button>`;
   document.getElementById('sheetBody').innerHTML = `
-    <div style="font-family:'Fraunces',serif;font-style:italic;color:var(--ink-soft);margin-bottom:18px;text-align:center;">for ${escape(p.name)}</div>
+    <div style="font-family:'Fraunces',serif;color:var(--ink-soft);margin-bottom:18px;text-align:center;">for ${escape(p.name)}</div>
     <div class="field">
       <label>Photo for AI rating (optional)</label>
       <div id="hcPhoto" class="photo-input">
@@ -1583,7 +1688,7 @@ function openLogSheet(plantId) {
     <h2>New entry</h2>
     <button class="sheet-save" onclick="saveLog('${plantId}')">Save</button>`;
   document.getElementById('sheetBody').innerHTML = `
-    <div style="font-family:'Fraunces',serif;font-style:italic;color:var(--ink-soft);margin-bottom:18px;text-align:center;">for ${escape(p.name)}</div>
+    <div style="font-family:'Fraunces',serif;color:var(--ink-soft);margin-bottom:18px;text-align:center;">for ${escape(p.name)}</div>
     <div class="field">
       <label>Type</label>
       <div class="seg" id="logType">
