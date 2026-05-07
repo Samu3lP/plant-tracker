@@ -1380,8 +1380,6 @@ function renderPlantDetail(id) {
   const nextWater = getNextWaterLabel(p);
   const nextMist = getNextMistLabel(p);
 
-  const healthLogs = logs.filter(l => l.type === 'health-check' && l.visualScore != null);
-
   document.getElementById('view').innerHTML = `
     <div class="detail-hero">
       <a class="back-btn" onclick="go('plants')">${icons.back} Plants</a>
@@ -1393,7 +1391,7 @@ function renderPlantDetail(id) {
       ${p.species ? `<div class="detail-species">${escape(p.species)}</div>` : ''}
 
       <div class="stats-grid">
-        <div class="stat"><div class="stat-label">Health</div><div class="stat-value ${score != null && score < 25 ? 'warn' : ''}">${score != null ? score : '—'}</div>${healthBarHTML(score)}</div>
+        <div class="stat" onclick="go('plant/${p.id}/health')" style="cursor:pointer;"><div class="stat-label">Health</div><div class="stat-value ${score != null && score < 25 ? 'warn' : ''}">${score != null ? score : '—'}</div>${healthBarHTML(score)}</div>
         <div class="stat"><div class="stat-label">Location</div><div class="stat-value" style="font-size:14px;">${escape(p.location || '—')}</div></div>
         <div class="stat"><div class="stat-label">Next water</div><div class="stat-value ${nextWater.warn ? 'warn' : ''}" style="font-size:14px;">${nextWater.label}</div></div>
         <div class="stat"><div class="stat-label">Next mist</div><div class="stat-value ${nextMist.warn ? 'warn' : ''}" style="font-size:14px;">${nextMist.label}</div></div>
@@ -1408,15 +1406,6 @@ function renderPlantDetail(id) {
       <div class="menu-action" onclick="closePlantMenu(); openLogSheet('${p.id}')">${icons.obs}<span>Add note</span></div>
       <div class="menu-action" onclick="closePlantMenu(); openPlantSheet('${p.id}')">${icons.edit}<span>Edit details</span></div>
       <div class="menu-action danger" onclick="closePlantMenu(); deletePlant('${p.id}')">${icons.trash}<span>Delete plant</span></div>
-    </div>
-
-    <div class="section-title">Health</div>
-    <div class="card" onclick="go('plant/${p.id}/health')" style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;margin-bottom:20px;">
-      <div>
-        <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:500;line-height:1;">${score != null ? score : '—'}</div>
-        <div style="font-size:12px;color:var(--ink-faint);margin-top:4px;">${healthLogs.length > 0 ? `${healthLogs.length} check${healthLogs.length !== 1 ? 's' : ''}` : 'No checks yet'}</div>
-      </div>
-      <div style="color:var(--ink-faint);display:flex;align-items:center;gap:4px;font-size:13px;">View trend ${icons.chevron}</div>
     </div>
 
     ${p.notes ? `<div class="section-title">Notes</div><div class="card" style="margin-bottom:20px;"><div style="font-family:'Fraunces',serif;color:var(--ink-soft);font-variation-settings:'opsz' 18;">${escape(p.notes)}</div></div>` : ''}
