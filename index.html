@@ -775,6 +775,34 @@
   }
   .toggle-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--moss); cursor: pointer; }
 
+  .photo-timeline {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 2px 0 12px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin-bottom: 4px;
+  }
+  .photo-timeline::-webkit-scrollbar { display: none; }
+  .photo-item { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .photo-thumb {
+    width: 88px;
+    height: 88px;
+    border-radius: var(--radius-sm);
+    background: var(--surface-2) center/cover no-repeat;
+    cursor: pointer;
+    border: 1px solid var(--divider);
+  }
+  .photo-thumb-label { font-size: 10px; color: var(--ink-faint); text-align: center; max-width: 88px; }
+  .photo-thumb-tag {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--moss);
+  }
+
   .diagnosis-preview {
     background: var(--moss-tint);
     border-left: 3px solid var(--moss);
@@ -1442,8 +1470,28 @@ function renderPlantHealth(id) {
   const checkLogs = logs.filter(l => l.type === 'health-check');
   const latestDiagnosis = checkLogs.find(l => l.diagnosis);
 
+  // Build photo timeline: profile photo + health check photos, chronological
+  const photoEntries = [];
+  if (p.photo) photoEntries.push({ src: p.photo, date: p.acquired || '', label: p.acquired ? fmtDate(p.acquired) : 'Profile', tag: 'Profile' });
+  [...checkLogs].reverse().forEach(l => {
+    if (l.photo) photoEntries.push({ src: l.photo, date: l.date, label: fmtDate(l.date), tag: null });
+  });
+  photoEntries.sort((a, b) => a.date.localeCompare(b.date));
+  const photosHTML = photoEntries.length === 0 ? '' : `
+    <div class="section-title">Photos</div>
+    <div class="photo-timeline">
+      ${photoEntries.map(ph => `
+        <div class="photo-item">
+          <div class="photo-thumb" style="background-image:url('${ph.src}')" onclick="openPhotoLightbox('${ph.src}')"></div>
+          ${ph.tag ? `<div class="photo-thumb-tag">${ph.tag}</div>` : ''}
+          <div class="photo-thumb-label">${ph.label}</div>
+        </div>`).join('')}
+    </div>`;
+
   document.getElementById('view').innerHTML = `
     <a class="back-btn" onclick="go('plant/${id}')">${icons.back} ${escape(p.name)}</a>
+
+    ${photosHTML}
 
     <div class="chart-wrap">
       <h4>Trend</h4>
@@ -1737,6 +1785,7 @@ function openHealthCheckSheet(plantId) {
     </div>
     <div class="field"><label>Notes</label><textarea id="hc_notes" placeholder="Anything you noticed…"></textarea></div>
     <input type="hidden" id="hc_diagnosis" value="">
+    <input type="hidden" id="hc_photo" value="">
   `;
   const photoEl  = document.getElementById('hcPhoto');
   const fileEl   = document.getElementById('hcFile');
@@ -1750,6 +1799,7 @@ function openHealthCheckSheet(plantId) {
     const file = e.target.files[0];
     if (!file) return;
     const b64 = await compressImage(file);
+    document.getElementById('hc_photo').value = b64;
     photoEl.style.cssText += `;background-image:url('${b64}');background-size:cover;background-position:center;`;
     photoEl.innerHTML = '';
     errEl.style.display = 'none';
@@ -1787,8 +1837,10 @@ function saveHealthCheck(plantId) {
   const visualScore = parseInt(document.getElementById('hc_health').value);
   const notes = document.getElementById('hc_notes').value.trim();
   const diagnosis = document.getElementById('hc_diagnosis')?.value.trim() || '';
+  const photo = document.getElementById('hc_photo')?.value || '';
   const entry = { id: uid(), plantId, type: 'health-check', date: today(), visualScore, notes };
   if (diagnosis) entry.diagnosis = diagnosis;
+  if (photo) entry.photo = photo;
   data.logs.push(entry);
   saveData();
   closeSheet();
@@ -1878,6 +1930,17 @@ async function compressImage(file) {
     };
     r.readAsDataURL(file);
   });
+}
+
+function openPhotoLightbox(src) {
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:300;display:flex;align-items:center;justify-content:center;cursor:pointer;';
+  ov.onclick = () => ov.remove();
+  const img = document.createElement('img');
+  img.src = src;
+  img.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;';
+  ov.appendChild(img);
+  document.body.appendChild(ov);
 }
 
 /* ---------- UTIL ---------- */
