@@ -769,6 +769,41 @@
   .photo-input svg { width: 32px; height: 32px; }
   .photo-input span { font-size: 13px; }
 
+  .toggle-row {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--ink-soft); cursor: pointer;
+  }
+  .toggle-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--moss); cursor: pointer; }
+
+  .diagnosis-preview {
+    background: var(--moss-tint);
+    border-left: 3px solid var(--moss);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1.55;
+    margin-top: 12px;
+  }
+  .diagnosis-block {
+    background: var(--moss-tint);
+    border-left: 3px solid var(--moss);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1.55;
+    margin-top: 8px;
+  }
+  .diagnosis-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--moss);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
   /* Settings */
   .setting-row {
     display: flex;
@@ -1029,11 +1064,14 @@ const icons = {
 };
 
 /* ---------- AI IDENTIFICATION ---------- */
-async function rateHealthFromImage(base64Image) {
+async function rateHealthFromImage(base64Image, withDiagnosis = false) {
   const key = getApiKey();
   if (!key) throw new Error('no-key');
   const mediaType = base64Image.match(/data:([^;]+);base64,/)?.[1] || 'image/jpeg';
   const imgData = base64Image.split(',')[1];
+  const prompt = withDiagnosis
+    ? 'Rate this plant\'s visual health and provide a diagnosis. Reply with raw JSON only (no markdown):\n{"score":<integer 1-10>,"notes":"<one sentence observation>","diagnosis":"<2-4 sentences covering: what you observe, likely issues or causes, and care recommendations>"}\n10 = thriving, 1 = severely struggling. Consider leaf colour, wilting, yellowing, pests, and overall vigour.'
+    : 'Rate this plant\'s visual health out of 10. Reply with raw JSON only (no markdown):\n{"score":<integer 1-10>,"notes":"<one sentence describing what you observe>"}\n10 = thriving, 1 = severely struggling. Consider leaf colour, wilting, yellowing, pests, and overall vigour.';
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -1044,12 +1082,12 @@ async function rateHealthFromImage(base64Image) {
     },
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 128,
+      max_tokens: withDiagnosis ? 512 : 128,
       messages: [{
         role: 'user',
         content: [
           { type: 'image', source: { type: 'base64', media_type: mediaType, data: imgData } },
-          { type: 'text', text: 'Rate this plant\'s visual health out of 10. Reply with raw JSON only (no markdown):\n{"score":<integer 1-10>,"notes":"<one sentence describing what you observe>"}\n10 = thriving, 1 = severely struggling. Consider leaf colour, wilting, yellowing, pests, and overall vigour.' }
+          { type: 'text', text: prompt }
         ]
       }]
     })
@@ -1061,7 +1099,11 @@ async function rateHealthFromImage(base64Image) {
   const json = await res.json();
   const text = json.content[0].text.replace(/```[a-z]*\n?/gi, '').trim();
   const parsed = JSON.parse(text);
-  return { score: Math.min(10, Math.max(1, Math.round(parsed.score))), notes: parsed.notes || '' };
+  return {
+    score: Math.min(10, Math.max(1, Math.round(parsed.score))),
+    notes: parsed.notes || '',
+    diagnosis: parsed.diagnosis || ''
+  };
 }
 
 async function identifyPlant(base64Image) {
@@ -1398,6 +1440,7 @@ function renderPlantHealth(id) {
   }
 
   const checkLogs = logs.filter(l => l.type === 'health-check');
+  const latestDiagnosis = checkLogs.find(l => l.diagnosis);
 
   document.getElementById('view').innerHTML = `
     <a class="back-btn" onclick="go('plant/${id}')">${icons.back} ${escape(p.name)}</a>
@@ -1409,10 +1452,17 @@ function renderPlantHealth(id) {
 
     <button onclick="openHealthCheckSheet('${id}')" style="width:100%;padding:11px;background:var(--moss);color:var(--surface);border-radius:var(--radius-sm);font-weight:600;font-size:14px;margin-bottom:20px;">Add health check</button>
 
+    ${latestDiagnosis ? `
+    <div class="section-title">Diagnosis</div>
+    <div class="card" style="margin-bottom:20px;">
+      <div class="diagnosis-label">Latest · ${fmtDate(latestDiagnosis.date)}</div>
+      <div style="font-size:14px;color:var(--ink);line-height:1.6;">${escape(latestDiagnosis.diagnosis)}</div>
+    </div>` : ''}
+
     <div class="section-title">Health checks</div>
     ${checkLogs.length === 0 ? `<div class="empty" style="padding:30px 0;"><p>No health checks yet.</p></div>` :
       `<div class="card" style="padding:4px 16px;">${checkLogs.map(l => {
-        return `<div class="log-entry">
+        return `<div class="log-entry" style="flex-wrap:wrap;">
           <div class="log-icon ${logCls(l.type)}">${logIcon(l.type)}</div>
           <div class="log-body">
             <div class="log-type">${logTypeLabel(l.type)}</div>
@@ -1420,6 +1470,7 @@ function renderPlantHealth(id) {
             ${l.notes ? `<div class="log-notes">"${escape(l.notes)}"</div>` : ''}
           </div>
           ${logScoreBadge(l)}
+          ${l.diagnosis ? `<div style="width:100%;padding:0 0 8px 40px;"><div class="diagnosis-block"><div class="diagnosis-label">Diagnosis</div>${escape(l.diagnosis)}</div></div>` : ''}
         </div>`;
       }).join('')}</div>`
     }
@@ -1669,6 +1720,10 @@ function openHealthCheckSheet(plantId) {
         ${icons.camera}<span>Tap to photograph your plant</span>
       </div>
       <input type="file" id="hcFile" accept="image/*" capture="environment" style="display:none">
+      <label class="toggle-row" style="margin-top:10px;">
+        <input type="checkbox" id="hcDiagnose">
+        <span>Request AI diagnosis</span>
+      </label>
       <div id="hcStatus" style="display:none;text-align:center;padding:10px 0;font-size:13px;color:var(--ink-faint);">Analysing with AI…</div>
       <div id="hcError" style="display:none;text-align:center;padding:6px 0;font-size:12px;color:var(--terracotta);"></div>
     </div>
@@ -1681,13 +1736,14 @@ function openHealthCheckSheet(plantId) {
       </div>
     </div>
     <div class="field"><label>Notes</label><textarea id="hc_notes" placeholder="Anything you noticed…"></textarea></div>
+    <input type="hidden" id="hc_diagnosis" value="">
   `;
-  const photoEl = document.getElementById('hcPhoto');
-  const fileEl  = document.getElementById('hcFile');
-  const status  = document.getElementById('hcStatus');
-  const errEl   = document.getElementById('hcError');
-  const slider  = document.getElementById('hc_health');
-  const valEl   = document.getElementById('hcVal');
+  const photoEl  = document.getElementById('hcPhoto');
+  const fileEl   = document.getElementById('hcFile');
+  const status   = document.getElementById('hcStatus');
+  const errEl    = document.getElementById('hcError');
+  const slider   = document.getElementById('hc_health');
+  const valEl    = document.getElementById('hcVal');
   slider.oninput = () => valEl.textContent = slider.value;
   photoEl.onclick = () => fileEl.click();
   fileEl.onchange = async (e) => {
@@ -1697,12 +1753,26 @@ function openHealthCheckSheet(plantId) {
     photoEl.style.cssText += `;background-image:url('${b64}');background-size:cover;background-position:center;`;
     photoEl.innerHTML = '';
     errEl.style.display = 'none';
+    const withDiagnosis = document.getElementById('hcDiagnose').checked;
+    status.textContent = withDiagnosis ? 'Analysing and diagnosing with AI…' : 'Analysing with AI…';
     status.style.display = 'block';
     try {
-      const result = await rateHealthFromImage(b64);
+      const result = await rateHealthFromImage(b64, withDiagnosis);
       slider.value = result.score;
       valEl.textContent = result.score;
       if (result.notes) document.getElementById('hc_notes').value = result.notes;
+      document.getElementById('hc_diagnosis').value = result.diagnosis || '';
+      if (result.diagnosis) {
+        const diagEl = document.getElementById('hcDiagnosisPreview');
+        if (diagEl) { diagEl.textContent = result.diagnosis; diagEl.style.display = 'block'; }
+        else {
+          const frag = document.createElement('div');
+          frag.id = 'hcDiagnosisPreview';
+          frag.className = 'diagnosis-preview';
+          frag.textContent = result.diagnosis;
+          document.getElementById('hc_diagnosis').insertAdjacentElement('beforebegin', frag);
+        }
+      }
     } catch (err) {
       errEl.textContent = err.message === 'no-key' ? 'Add a Claude API key in Settings to use AI rating.' : 'AI rating failed — set score manually.';
       errEl.style.display = 'block';
@@ -1716,7 +1786,10 @@ function openHealthCheckSheet(plantId) {
 function saveHealthCheck(plantId) {
   const visualScore = parseInt(document.getElementById('hc_health').value);
   const notes = document.getElementById('hc_notes').value.trim();
-  data.logs.push({ id: uid(), plantId, type: 'health-check', date: today(), visualScore, notes });
+  const diagnosis = document.getElementById('hc_diagnosis')?.value.trim() || '';
+  const entry = { id: uid(), plantId, type: 'health-check', date: today(), visualScore, notes };
+  if (diagnosis) entry.diagnosis = diagnosis;
+  data.logs.push(entry);
   saveData();
   closeSheet();
   toast('❤️ Health check saved');
