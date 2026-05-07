@@ -388,7 +388,6 @@
     margin: 0 -22px 20px;
     padding: 0 22px 24px;
     border-bottom: 1px solid var(--divider);
-    position: relative;
   }
   .back-btn {
     display: inline-flex; align-items: center; gap: 6px;
@@ -502,9 +501,6 @@
   .action-btn svg { width: 18px; height: 18px; color: var(--moss); }
 
   .plant-menu-btn {
-    position: absolute;
-    bottom: 24px;
-    right: 22px;
     width: 34px;
     height: 34px;
     border-radius: 50%;
@@ -514,6 +510,7 @@
     color: var(--ink-soft);
     cursor: pointer;
     padding: 0;
+    flex-shrink: 0;
   }
   .plant-menu-btn svg { width: 18px; height: 18px; }
   .plant-menu-overlay {
@@ -1111,13 +1108,16 @@ window.addEventListener('hashchange', render);
 /* ---------- RENDER ---------- */
 function render() {
   const route = getRoute();
-  const [name, param] = route.split('/');
+  const [name, param, subpage] = route.split('/');
   document.querySelectorAll('.tab').forEach(t => {
     t.classList.toggle('active', t.dataset.route === name);
   });
   switch (name) {
     case 'plants': renderPlants(); break;
-    case 'plant': renderPlantDetail(param); break;
+    case 'plant':
+      if (subpage === 'health') renderPlantHealth(param);
+      else renderPlantDetail(param);
+      break;
     case 'logs': renderLogs(); break;
     case 'settings': renderSettings(); break;
     default: renderHome();
@@ -1310,31 +1310,16 @@ function renderPlantDetail(id) {
   const nextWater = getNextWaterLabel(p);
   const nextMist = getNextMistLabel(p);
 
-  // Health chart — uses health-check logs with computed scores
-  const healthLogs = logs.filter(l => l.type === 'health-check' && l.visualScore != null).reverse().slice(-12);
-  let chartHTML = '<div style="text-align:center;color:var(--ink-faint);font-size:13px;padding:20px 0;">Log a health check to start tracking the trend.</div>';
-  if (healthLogs.length >= 2) {
-    const scores = healthLogs.map(l => computeHealth(p, l.date, l.visualScore));
-    const w = 320, h = 80, pad = 8;
-    const xs = healthLogs.map((_, i) => pad + (i * (w - pad * 2) / (healthLogs.length - 1)));
-    const minS = Math.min(...scores), maxS = Math.max(...scores);
-    const range = maxS - minS || 1;
-    const ys = scores.map(s => h - pad - ((s - minS) / range) * (h - pad * 2));
-    const path = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
-    const area = `M${xs[0]},${h} L` + xs.map((x, i) => `${x},${ys[i]}`).join(' L') + ` L${xs[xs.length-1]},${h} Z`;
-    chartHTML = `<svg class="chart-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-      <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--moss)" stop-opacity="0.25"/><stop offset="100%" stop-color="var(--moss)" stop-opacity="0"/></linearGradient></defs>
-      <path d="${area}" fill="url(#g)"/>
-      <path d="${path}" stroke="var(--moss)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-      ${xs.map((x, i) => `<circle cx="${x}" cy="${ys[i]}" r="3" fill="var(--moss)"/>`).join('')}
-    </svg>`;
-  }
+  const healthLogs = logs.filter(l => l.type === 'health-check' && l.visualScore != null);
 
   document.getElementById('view').innerHTML = `
     <div class="detail-hero">
       <a class="back-btn" onclick="go('plants')">${icons.back} Plants</a>
       <div class="detail-photo" ${photo}>${!p.photo ? icons.leaf : ''}</div>
-      <div class="detail-name">${escape(p.name)}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <div class="detail-name" style="margin-bottom:0;flex:1;">${escape(p.name)}</div>
+        <button class="plant-menu-btn" onclick="openPlantMenu()">${icons.more}</button>
+      </div>
       ${p.species ? `<div class="detail-species">${escape(p.species)}</div>` : ''}
 
       <div class="stats-grid">
@@ -1343,8 +1328,6 @@ function renderPlantDetail(id) {
         <div class="stat"><div class="stat-label">Next water</div><div class="stat-value ${nextWater.warn ? 'warn' : ''}" style="font-size:14px;">${nextWater.label}</div></div>
         <div class="stat"><div class="stat-label">Next mist</div><div class="stat-value ${nextMist.warn ? 'warn' : ''}" style="font-size:14px;">${nextMist.label}</div></div>
       </div>
-
-      <button class="plant-menu-btn" onclick="openPlantMenu()">${icons.more}</button>
     </div>
 
     <div class="plant-menu-overlay" id="plantMenuOverlay" onclick="closePlantMenu()"></div>
@@ -1357,10 +1340,18 @@ function renderPlantDetail(id) {
       <div class="menu-action danger" onclick="closePlantMenu(); deletePlant('${p.id}')">${icons.trash}<span>Delete plant</span></div>
     </div>
 
-    <div class="chart-wrap">
-      <h4>Health trend</h4>
-      ${chartHTML}
+    <div class="section-title">Health</div>
+    <div class="card" onclick="go('plant/${p.id}/health')" style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;margin-bottom:20px;">
+      <div>
+        <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:500;line-height:1;">${score != null ? score : '—'}</div>
+        <div style="font-size:12px;color:var(--ink-faint);margin-top:4px;">${healthLogs.length > 0 ? `${healthLogs.length} check${healthLogs.length !== 1 ? 's' : ''}` : 'No checks yet'}</div>
+      </div>
+      <div style="color:var(--ink-faint);display:flex;align-items:center;gap:4px;font-size:13px;">View trend ${icons.chevron}</div>
     </div>
+
+    ${p.notes ? `<div class="section-title">Notes</div><div class="card" style="margin-bottom:20px;"><div style="font-family:'Fraunces',serif;color:var(--ink-soft);font-variation-settings:'opsz' 18;">${escape(p.notes)}</div></div>` : ''}
+
+    ${p.acquired ? `<div style="text-align:center;color:var(--ink-faint);font-size:12px;margin-top:4px;margin-bottom:20px;">Acquired ${fmtDate(p.acquired)}</div>` : ''}
 
     <div class="section-title">History</div>
     ${logs.length === 0 ? `<div class="empty" style="padding:30px 0;"><p>No log entries yet.</p></div>` :
@@ -1376,10 +1367,62 @@ function renderPlantDetail(id) {
         </div>`;
       }).join('')}</div>`
     }
+  `;
+}
 
-    ${p.notes ? `<div class="section-title">Notes</div><div class="card"><div style="font-family:'Fraunces',serif;color:var(--ink-soft);font-variation-settings:'opsz' 18;">${escape(p.notes)}</div></div>` : ''}
+/* PLANT HEALTH */
+function renderPlantHealth(id) {
+  const p = data.plants.find(p => p.id === id);
+  if (!p) { go('plant/' + id); return; }
+  setHeader(`<div><div class="header-sub">${escape(p.name)}</div><div class="header-title">Health</div></div>`);
 
-    ${p.acquired ? `<div style="text-align:center;color:var(--ink-faint);font-size:12px;margin-top:24px;">Acquired ${fmtDate(p.acquired)}</div>` : ''}
+  const logs = [...data.logs].filter(l => l.plantId === id).reverse().sort((a, b) => b.date.localeCompare(a.date));
+  const healthLogs = logs.filter(l => l.type === 'health-check' && l.visualScore != null).reverse().slice(-12);
+
+  let chartHTML = '<div style="text-align:center;color:var(--ink-faint);font-size:13px;padding:24px 0;">Log a health check to start tracking the trend.</div>';
+  if (healthLogs.length >= 2) {
+    const scores = healthLogs.map(l => computeHealth(p, l.date, l.visualScore));
+    const w = 320, h = 100, pad = 8;
+    const xs = healthLogs.map((_, i) => pad + (i * (w - pad * 2) / (healthLogs.length - 1)));
+    const minS = Math.min(...scores), maxS = Math.max(...scores);
+    const range = maxS - minS || 1;
+    const ys = scores.map(s => h - pad - ((s - minS) / range) * (h - pad * 2));
+    const path = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
+    const area = `M${xs[0]},${h} L` + xs.map((x, i) => `${x},${ys[i]}`).join(' L') + ` L${xs[xs.length-1]},${h} Z`;
+    chartHTML = `<svg class="chart-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+      <defs><linearGradient id="g2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--moss)" stop-opacity="0.25"/><stop offset="100%" stop-color="var(--moss)" stop-opacity="0"/></linearGradient></defs>
+      <path d="${area}" fill="url(#g2)"/>
+      <path d="${path}" stroke="var(--moss)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      ${xs.map((x, i) => `<circle cx="${x}" cy="${ys[i]}" r="3" fill="var(--moss)"/>`).join('')}
+    </svg>`;
+  }
+
+  const checkLogs = logs.filter(l => l.type === 'health-check');
+
+  document.getElementById('view').innerHTML = `
+    <a class="back-btn" onclick="go('plant/${id}')">${icons.back} ${escape(p.name)}</a>
+
+    <div class="chart-wrap">
+      <h4>Trend</h4>
+      ${chartHTML}
+    </div>
+
+    <button onclick="openHealthCheckSheet('${id}')" style="width:100%;padding:11px;background:var(--moss);color:var(--surface);border-radius:var(--radius-sm);font-weight:600;font-size:14px;margin-bottom:20px;">Add health check</button>
+
+    <div class="section-title">Health checks</div>
+    ${checkLogs.length === 0 ? `<div class="empty" style="padding:30px 0;"><p>No health checks yet.</p></div>` :
+      `<div class="card" style="padding:4px 16px;">${checkLogs.map(l => {
+        return `<div class="log-entry">
+          <div class="log-icon ${logCls(l.type)}">${logIcon(l.type)}</div>
+          <div class="log-body">
+            <div class="log-type">${logTypeLabel(l.type)}</div>
+            <div class="log-date">${fmtDate(l.date)}</div>
+            ${l.notes ? `<div class="log-notes">"${escape(l.notes)}"</div>` : ''}
+          </div>
+          ${logScoreBadge(l)}
+        </div>`;
+      }).join('')}</div>`
+    }
   `;
 }
 
