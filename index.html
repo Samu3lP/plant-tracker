@@ -1779,6 +1779,7 @@ function openHealthCheckSheet(plantId) {
         <div class="slider-scale"><span>Struggling</span><span>Thriving</span></div>
       </div>
     </div>
+    <div id="hcDiagnosisPreview" style="display:none;margin-bottom:12px;"></div>
     <div class="field"><label>Notes</label><textarea id="hc_notes" placeholder="Anything you noticed…"></textarea></div>
     <input type="hidden" id="hc_diagnosis" value="">
     <input type="hidden" id="hc_cure" value="">
@@ -1811,15 +1812,9 @@ function openHealthCheckSheet(plantId) {
       document.getElementById('hc_diagnosis').value = result.diagnosis || '';
       document.getElementById('hc_cure').value = result.cure || '';
       if (result.diagnosis || result.cure) {
-        let diagEl = document.getElementById('hcDiagnosisPreview');
-        const tableHTML = `<div class="diag-table-wrap"><table class="diag-table"><thead><tr><th>Diagnosis</th><th>Cure</th></tr></thead><tbody><tr><td>${escape(result.diagnosis)}</td><td>${escape(result.cure)}</td></tr></tbody></table></div>`;
-        if (diagEl) { diagEl.innerHTML = tableHTML; }
-        else {
-          const frag = document.createElement('div');
-          frag.id = 'hcDiagnosisPreview';
-          frag.innerHTML = tableHTML;
-          document.getElementById('hc_diagnosis').insertAdjacentElement('beforebegin', frag);
-        }
+        const diagEl = document.getElementById('hcDiagnosisPreview');
+        diagEl.innerHTML = `<div class="diag-table-wrap"><table class="diag-table"><thead><tr><th>Diagnosis</th><th>Cure</th></tr></thead><tbody><tr><td>${escape(result.diagnosis)}</td><td>${escape(result.cure)}</td></tr></tbody></table></div>`;
+        diagEl.style.display = 'block';
       }
     } catch (err) {
       errEl.textContent = err.message === 'no-key' ? 'Add a Claude API key in Settings to use AI rating.' : 'AI rating failed — set score manually.';
