@@ -1515,7 +1515,6 @@ function renderPlantHealth(id) {
             ${l.notes ? `<div class="log-notes">"${escape(l.notes)}"</div>` : ''}
           </div>
           ${logScoreBadge(l)}
-          ${(l.diagnosis || l.cure) ? `<div style="width:100%;padding:0 0 8px 0;"><div class="diag-table-wrap"><table class="diag-table"><thead><tr><th>Diagnosis</th><th>Cure</th></tr></thead><tbody><tr><td>${escape(l.diagnosis||'')}</td><td>${escape(l.cure||'')}</td></tr></tbody></table></div></div>` : ''}
         </div>`;
       }).join('')}</div>`
     }
