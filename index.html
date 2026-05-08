@@ -570,7 +570,7 @@
     margin-bottom: 12px;
     font-weight: 600;
   }
-  .chart-svg { width: 100%; height: 100px; display: block; }
+  .chart-svg { width: 100%; display: block; }
 
   /* Log entry */
   .log-entry {
@@ -1444,24 +1444,50 @@ function renderPlantHealth(id) {
   if (!p) { go('plant/' + id); return; }
   setHeader(`<div><div class="header-sub">${escape(p.name)}</div><div class="header-title">Health</div></div>`);
 
-  const logs = [...data.logs].filter(l => l.plantId === id).reverse().sort((a, b) => b.date.localeCompare(a.date));
-  const healthLogs = logs.filter(l => l.type === 'health-check' && l.visualScore != null).reverse().slice(-12);
+  const logs = [...data.logs].filter(l => l.plantId === id).sort((a, b) => b.date.localeCompare(a.date));
+  const chartLogs = [...data.logs].filter(l => l.plantId === id && l.type === 'health-check' && l.visualScore != null).sort((a, b) => a.date.localeCompare(b.date));
 
   let chartHTML = '<div style="text-align:center;color:var(--ink-faint);font-size:13px;padding:24px 0;">Log a health check to start tracking the trend.</div>';
-  if (healthLogs.length >= 2) {
-    const scores = healthLogs.map(l => computeHealth(p, l.date, l.visualScore));
-    const w = 320, h = 100, pad = 8;
-    const xs = healthLogs.map((_, i) => pad + (i * (w - pad * 2) / (healthLogs.length - 1)));
-    const minS = Math.min(...scores), maxS = Math.max(...scores);
-    const range = maxS - minS || 1;
-    const ys = scores.map(s => h - pad - ((s - minS) / range) * (h - pad * 2));
-    const path = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
-    const area = `M${xs[0]},${h} L` + xs.map((x, i) => `${x},${ys[i]}`).join(' L') + ` L${xs[xs.length-1]},${h} Z`;
-    chartHTML = `<svg class="chart-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+  if (chartLogs.length >= 1) {
+    const svgW = 320, svgH = 150;
+    const padL = 26, padR = 10, padT = 10, padB = 26;
+    const plotW = svgW - padL - padR, plotH = svgH - padT - padB;
+
+    const yPos = v => padT + plotH * (1 - v / 10);
+    const timestamps = chartLogs.map(l => +new Date(l.date + 'T00:00:00'));
+    const minT = timestamps[0];
+    const maxT = chartLogs.length === 1 ? minT + 86400000 * 7 : timestamps[timestamps.length - 1];
+    const xPos = t => padL + ((t - minT) / (maxT - minT)) * plotW;
+
+    const pts = chartLogs.map((l, i) => ({ x: xPos(timestamps[i]), y: yPos(l.visualScore) }));
+
+    const gridVals = [2, 4, 6, 8, 10];
+    const grid = gridVals.map(v => {
+      const y = yPos(v).toFixed(1);
+      return `<line x1="${padL}" y1="${y}" x2="${svgW - padR}" y2="${y}" stroke="rgba(0,0,0,0.07)" stroke-width="1"/>
+              <text x="${padL - 4}" y="${y}" text-anchor="end" dominant-baseline="middle" fill="var(--ink-faint)" font-size="9">${v}</text>`;
+    }).join('');
+
+    const fmtD = iso => { const d = new Date(iso + 'T00:00:00'); return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); };
+    const xLabelIdxs = chartLogs.length === 1 ? [0] : [0, chartLogs.length - 1];
+    if (chartLogs.length > 4) xLabelIdxs.splice(1, 0, Math.floor((chartLogs.length - 1) / 2));
+    const xLabels = xLabelIdxs.map((idx, li) => {
+      const anchor = li === 0 ? 'start' : li === xLabelIdxs.length - 1 ? 'end' : 'middle';
+      return `<text x="${pts[idx].x.toFixed(1)}" y="${svgH - 4}" text-anchor="${anchor}" fill="var(--ink-faint)" font-size="9">${fmtD(chartLogs[idx].date)}</text>`;
+    }).join('');
+
+    const pathStr = pts.length >= 2 ? pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') : '';
+    const areaStr = pts.length >= 2 ? `M${pts[0].x.toFixed(1)},${(padT + plotH).toFixed(1)} L` + pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L') + ` L${pts[pts.length-1].x.toFixed(1)},${(padT + plotH).toFixed(1)} Z` : '';
+
+    chartHTML = `<svg class="chart-svg" viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="xMidYMid meet">
       <defs><linearGradient id="g2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--moss)" stop-opacity="0.25"/><stop offset="100%" stop-color="var(--moss)" stop-opacity="0"/></linearGradient></defs>
-      <path d="${area}" fill="url(#g2)"/>
-      <path d="${path}" stroke="var(--moss)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-      ${xs.map((x, i) => `<circle cx="${x}" cy="${ys[i]}" r="3" fill="var(--moss)"/>`).join('')}
+      <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + plotH}" stroke="rgba(0,0,0,0.12)" stroke-width="1"/>
+      <line x1="${padL}" y1="${padT + plotH}" x2="${svgW - padR}" y2="${padT + plotH}" stroke="rgba(0,0,0,0.12)" stroke-width="1"/>
+      ${grid}
+      ${areaStr ? `<path d="${areaStr}" fill="url(#g2)"/>` : ''}
+      ${pathStr ? `<path d="${pathStr}" stroke="var(--moss)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
+      ${pts.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="var(--moss)"/>`).join('')}
+      ${xLabels}
     </svg>`;
   }
 
