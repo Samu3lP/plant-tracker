@@ -1507,15 +1507,15 @@ function renderPlantHealth(id) {
     <div class="section-title">Health checks</div>
     ${checkLogs.length === 0 ? `<div class="empty" style="padding:30px 0;"><p>No health checks yet.</p></div>` :
       `<div class="card" style="padding:4px 16px;">${checkLogs.map(l => {
-        return `<div class="log-entry" style="cursor:pointer;" onclick="openHealthCheckDetail('${l.id}')">
+        return `<div class="log-entry" style="flex-wrap:wrap;cursor:pointer;" onclick="openHealthCheckDetail('${l.id}')">
           <div class="log-icon ${logCls(l.type)}">${logIcon(l.type)}</div>
           <div class="log-body">
             <div class="log-type">${logTypeLabel(l.type)}</div>
             <div class="log-date">${fmtDate(l.date)}</div>
             ${l.notes ? `<div class="log-notes">"${escape(l.notes)}"</div>` : ''}
-            ${(l.diagnosis || l.cure) ? `<div style="font-size:12px;color:var(--moss);margin-top:2px;">Diagnosis available</div>` : ''}
           </div>
           ${logScoreBadge(l)}
+          ${(l.diagnosis || l.cure) ? `<div style="width:100%;padding:0 0 8px 0;"><div class="diag-table-wrap"><table class="diag-table"><thead><tr><th>Diagnosis</th><th>Cure</th></tr></thead><tbody><tr><td>${escape(l.diagnosis||'')}</td><td>${escape(l.cure||'')}</td></tr></tbody></table></div></div>` : ''}
         </div>`;
       }).join('')}</div>`
     }
@@ -1805,13 +1805,11 @@ function openHealthCheckSheet(plantId) {
       slider.value = result.score;
       valEl.textContent = result.score;
       if (result.notes) document.getElementById('hc_notes').value = result.notes;
-      if (result.score < 6 && (result.diagnosis || result.cure)) {
-        document.getElementById('hc_diagnosis').value = result.diagnosis || '';
-        document.getElementById('hc_cure').value = result.cure || '';
-        const diagEl = document.getElementById('hcDiagnosisPreview');
-        diagEl.innerHTML = `<div class="diag-table-wrap"><table class="diag-table"><thead><tr><th>Diagnosis</th><th>Cure</th></tr></thead><tbody><tr><td>${escape(result.diagnosis)}</td><td>${escape(result.cure)}</td></tr></tbody></table></div>`;
-        diagEl.style.display = 'block';
-      }
+      document.getElementById('hc_diagnosis').value = result.diagnosis || '';
+      document.getElementById('hc_cure').value = result.cure || '';
+      const diagEl = document.getElementById('hcDiagnosisPreview');
+      diagEl.innerHTML = `<div class="diag-table-wrap"><table class="diag-table"><thead><tr><th>Diagnosis</th><th>Cure</th></tr></thead><tbody><tr><td>${escape(result.diagnosis||'')}</td><td>${escape(result.cure||'')}</td></tr></tbody></table></div>`;
+      diagEl.style.display = 'block';
     } catch (err) {
       errEl.textContent = err.message === 'no-key' ? 'Add a Claude API key in Settings to use AI rating.' : 'AI rating failed — set score manually.';
       errEl.style.display = 'block';
