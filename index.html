@@ -1507,15 +1507,15 @@ function renderPlantHealth(id) {
     <div class="section-title">Health checks</div>
     ${checkLogs.length === 0 ? `<div class="empty" style="padding:30px 0;"><p>No health checks yet.</p></div>` :
       `<div class="card" style="padding:4px 16px;">${checkLogs.map(l => {
-        return `<div class="log-entry" style="flex-wrap:wrap;">
+        return `<div class="log-entry" style="cursor:pointer;" onclick="openHealthCheckDetail('${l.id}')">
           <div class="log-icon ${logCls(l.type)}">${logIcon(l.type)}</div>
           <div class="log-body">
             <div class="log-type">${logTypeLabel(l.type)}</div>
             <div class="log-date">${fmtDate(l.date)}</div>
             ${l.notes ? `<div class="log-notes">"${escape(l.notes)}"</div>` : ''}
+            ${(l.diagnosis || l.cure) ? `<div style="font-size:12px;color:var(--moss);margin-top:2px;">Diagnosis available</div>` : ''}
           </div>
           ${logScoreBadge(l)}
-          ${(l.diagnosis || l.cure) ? `<div style="width:100%;padding:0 0 8px 0;"><div class="diag-table-wrap"><table class="diag-table"><thead><tr><th>Diagnosis</th><th>Cure</th></tr></thead><tbody><tr><td>${escape(l.diagnosis||'')}</td><td>${escape(l.cure||'')}</td></tr></tbody></table></div></div>` : ''}
         </div>`;
       }).join('')}</div>`
     }
@@ -1765,10 +1765,6 @@ function openHealthCheckSheet(plantId) {
         ${icons.camera}<span>Tap to photograph your plant</span>
       </div>
       <input type="file" id="hcFile" accept="image/*" capture="environment" style="display:none">
-      <label class="toggle-row" style="margin-top:10px;">
-        <input type="checkbox" id="hcDiagnose">
-        <span>Request AI diagnosis</span>
-      </label>
       <div id="hcStatus" style="display:none;text-align:center;padding:10px 0;font-size:13px;color:var(--ink-faint);">Analysing with AI…</div>
       <div id="hcError" style="display:none;text-align:center;padding:6px 0;font-size:12px;color:var(--terracotta);"></div>
     </div>
@@ -1786,12 +1782,12 @@ function openHealthCheckSheet(plantId) {
     <input type="hidden" id="hc_cure" value="">
     <input type="hidden" id="hc_photo" value="">
   `;
-  const photoEl  = document.getElementById('hcPhoto');
-  const fileEl   = document.getElementById('hcFile');
-  const status   = document.getElementById('hcStatus');
-  const errEl    = document.getElementById('hcError');
-  const slider   = document.getElementById('hc_health');
-  const valEl    = document.getElementById('hcVal');
+  const photoEl = document.getElementById('hcPhoto');
+  const fileEl  = document.getElementById('hcFile');
+  const status  = document.getElementById('hcStatus');
+  const errEl   = document.getElementById('hcError');
+  const slider  = document.getElementById('hc_health');
+  const valEl   = document.getElementById('hcVal');
   slider.oninput = () => valEl.textContent = slider.value;
   photoEl.onclick = () => fileEl.click();
   fileEl.onchange = async (e) => {
@@ -1802,17 +1798,16 @@ function openHealthCheckSheet(plantId) {
     photoEl.style.cssText += `;background-image:url('${b64}');background-size:cover;background-position:center;`;
     photoEl.innerHTML = '';
     errEl.style.display = 'none';
-    const withDiagnosis = document.getElementById('hcDiagnose').checked;
-    status.textContent = withDiagnosis ? 'Analysing and diagnosing with AI…' : 'Analysing with AI…';
+    status.textContent = 'Analysing with AI…';
     status.style.display = 'block';
     try {
-      const result = await rateHealthFromImage(b64, withDiagnosis);
+      const result = await rateHealthFromImage(b64, true);
       slider.value = result.score;
       valEl.textContent = result.score;
       if (result.notes) document.getElementById('hc_notes').value = result.notes;
-      document.getElementById('hc_diagnosis').value = result.diagnosis || '';
-      document.getElementById('hc_cure').value = result.cure || '';
-      if (result.diagnosis || result.cure) {
+      if (result.score < 6 && (result.diagnosis || result.cure)) {
+        document.getElementById('hc_diagnosis').value = result.diagnosis || '';
+        document.getElementById('hc_cure').value = result.cure || '';
         const diagEl = document.getElementById('hcDiagnosisPreview');
         diagEl.innerHTML = `<div class="diag-table-wrap"><table class="diag-table"><thead><tr><th>Diagnosis</th><th>Cure</th></tr></thead><tbody><tr><td>${escape(result.diagnosis)}</td><td>${escape(result.cure)}</td></tr></tbody></table></div>`;
         diagEl.style.display = 'block';
@@ -1842,6 +1837,27 @@ function saveHealthCheck(plantId) {
   closeSheet();
   toast('❤️ Health check saved');
   render();
+}
+
+function openHealthCheckDetail(logId) {
+  const l = data.logs.find(l => l.id === logId);
+  if (!l) return;
+  const scoreColor = l.visualScore >= 7 ? 'var(--moss)' : l.visualScore >= 4 ? '#c8820a' : 'var(--terracotta)';
+  document.getElementById('sheetHeader').innerHTML = `
+    <div style="width:60px;"></div>
+    <h2>Health check</h2>
+    <button class="sheet-close" onclick="closeSheet()">Done</button>`;
+  document.getElementById('sheetBody').innerHTML = `
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-size:52px;font-weight:700;color:${scoreColor};font-family:'Fraunces',serif;line-height:1;">${l.visualScore}</div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-faint);margin-top:2px;">out of 10</div>
+      <div style="font-size:14px;color:var(--ink-soft);margin-top:6px;">${fmtDate(l.date)}</div>
+    </div>
+    ${l.photo ? `<div onclick="openPhotoLightbox('${l.photo}')" style="width:100%;aspect-ratio:4/3;background-image:url('${l.photo}');background-size:cover;background-position:center;border-radius:var(--radius-sm);margin-bottom:16px;cursor:pointer;"></div>` : ''}
+    ${(l.diagnosis || l.cure) ? `<div class="diag-table-wrap" style="margin-bottom:16px;"><table class="diag-table"><thead><tr><th>Diagnosis</th><th>Cure</th></tr></thead><tbody><tr><td>${escape(l.diagnosis||'')}</td><td>${escape(l.cure||'')}</td></tr></tbody></table></div>` : ''}
+    ${l.notes ? `<div class="field" style="margin-bottom:0;"><label>Notes</label><div style="font-size:14px;color:var(--ink);line-height:1.6;padding:10px 12px;background:var(--surface-2,#f5f5f0);border-radius:var(--radius-sm);">${escape(l.notes)}</div></div>` : ''}
+  `;
+  openSheet();
 }
 
 function openLogSheet(plantId) {
