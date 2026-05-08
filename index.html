@@ -803,33 +803,40 @@
     color: var(--moss);
   }
 
-  .diagnosis-preview {
-    background: var(--moss-tint);
-    border-left: 3px solid var(--moss);
-    border-radius: var(--radius-sm);
-    padding: 10px 12px;
+  .diag-table {
+    width: 100%;
+    border-collapse: collapse;
     font-size: 13px;
-    color: var(--ink);
-    line-height: 1.55;
-    margin-top: 12px;
-  }
-  .diagnosis-block {
-    background: var(--moss-tint);
-    border-left: 3px solid var(--moss);
+    margin-top: 10px;
     border-radius: var(--radius-sm);
-    padding: 10px 12px;
-    font-size: 13px;
-    color: var(--ink);
-    line-height: 1.55;
-    margin-top: 8px;
+    overflow: hidden;
   }
-  .diagnosis-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
+  .diag-table th {
+    background: var(--moss-tint);
     color: var(--moss);
+    font-size: 11px;
     font-weight: 600;
-    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 6px 10px;
+    text-align: left;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+  }
+  .diag-table td {
+    padding: 8px 10px;
+    vertical-align: top;
+    color: var(--ink);
+    line-height: 1.55;
+    border-right: 1px solid rgba(0,0,0,0.06);
+    width: 50%;
+  }
+  .diag-table td:last-child { border-right: none; }
+  .diag-table tr { background: var(--surface); }
+  .diag-table-wrap {
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    margin-top: 8px;
   }
 
   /* Settings */
@@ -1098,7 +1105,7 @@ async function rateHealthFromImage(base64Image, withDiagnosis = false) {
   const mediaType = base64Image.match(/data:([^;]+);base64,/)?.[1] || 'image/jpeg';
   const imgData = base64Image.split(',')[1];
   const prompt = withDiagnosis
-    ? 'Rate this plant\'s visual health and provide a diagnosis. Reply with raw JSON only (no markdown):\n{"score":<integer 1-10>,"notes":"<one sentence observation>","diagnosis":"<3-5 sentences: (1) what you observe, (2) likely cause, (3) 2-3 concrete actionable steps the owner can take right now to help the plant recover or maintain its health>"}\n10 = thriving, 1 = severely struggling. Consider leaf colour, wilting, yellowing, pests, and overall vigour.'
+    ? 'Rate this plant\'s visual health and provide a diagnosis. Reply with raw JSON only (no markdown):\n{"score":<integer 1-10>,"notes":"<one sentence observation>","diagnosis":"<1-2 sentences: what you observe and the likely cause>","cure":"<2-3 concrete actionable steps the owner can take right now to help the plant recover or maintain health>"}\n10 = thriving, 1 = severely struggling. Consider leaf colour, wilting, yellowing, pests, and overall vigour.'
     : 'Rate this plant\'s visual health out of 10. Reply with raw JSON only (no markdown):\n{"score":<integer 1-10>,"notes":"<one sentence describing what you observe>"}\n10 = thriving, 1 = severely struggling. Consider leaf colour, wilting, yellowing, pests, and overall vigour.';
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -1130,7 +1137,8 @@ async function rateHealthFromImage(base64Image, withDiagnosis = false) {
   return {
     score: Math.min(10, Math.max(1, Math.round(parsed.score))),
     notes: parsed.notes || '',
-    diagnosis: parsed.diagnosis || ''
+    diagnosis: parsed.diagnosis || '',
+    cure: parsed.cure || ''
   };
 }
 
@@ -1457,7 +1465,7 @@ function renderPlantHealth(id) {
   }
 
   const checkLogs = logs.filter(l => l.type === 'health-check');
-  const latestDiagnosis = checkLogs.find(l => l.diagnosis);
+  const latestDiagnosis = checkLogs.find(l => l.diagnosis || l.cure);
 
   // Build photo timeline: profile photo + health check photos, chronological
   const photoEntries = [];
@@ -1490,10 +1498,9 @@ function renderPlantHealth(id) {
     <button onclick="openHealthCheckSheet('${id}')" style="width:100%;padding:11px;background:var(--moss);color:var(--surface);border-radius:var(--radius-sm);font-weight:600;font-size:14px;margin-bottom:20px;">Add health check</button>
 
     ${latestDiagnosis ? `
-    <div class="section-title">Diagnosis</div>
-    <div class="card" style="margin-bottom:20px;">
-      <div class="diagnosis-label">Latest · ${fmtDate(latestDiagnosis.date)}</div>
-      <div style="font-size:14px;color:var(--ink);line-height:1.6;">${escape(latestDiagnosis.diagnosis)}</div>
+    <div class="section-title">Latest Diagnosis · ${fmtDate(latestDiagnosis.date)}</div>
+    <div class="card" style="margin-bottom:20px;padding:0;overflow:hidden;">
+      <div class="diag-table-wrap" style="margin:0;border:none;"><table class="diag-table"><thead><tr><th>Diagnosis</th><th>Cure</th></tr></thead><tbody><tr><td>${escape(latestDiagnosis.diagnosis || '')}</td><td>${escape(latestDiagnosis.cure || '')}</td></tr></tbody></table></div>
     </div>` : ''}
 
     <div class="section-title">Health checks</div>
@@ -1507,7 +1514,7 @@ function renderPlantHealth(id) {
             ${l.notes ? `<div class="log-notes">"${escape(l.notes)}"</div>` : ''}
           </div>
           ${logScoreBadge(l)}
-          ${l.diagnosis ? `<div style="width:100%;padding:0 0 8px 40px;"><div class="diagnosis-block"><div class="diagnosis-label">Diagnosis</div>${escape(l.diagnosis)}</div></div>` : ''}
+          ${(l.diagnosis || l.cure) ? `<div style="width:100%;padding:0 0 8px 0;"><div class="diag-table-wrap"><table class="diag-table"><thead><tr><th>Diagnosis</th><th>Cure</th></tr></thead><tbody><tr><td>${escape(l.diagnosis||'')}</td><td>${escape(l.cure||'')}</td></tr></tbody></table></div></div>` : ''}
         </div>`;
       }).join('')}</div>`
     }
@@ -1774,6 +1781,7 @@ function openHealthCheckSheet(plantId) {
     </div>
     <div class="field"><label>Notes</label><textarea id="hc_notes" placeholder="Anything you noticed…"></textarea></div>
     <input type="hidden" id="hc_diagnosis" value="">
+    <input type="hidden" id="hc_cure" value="">
     <input type="hidden" id="hc_photo" value="">
   `;
   const photoEl  = document.getElementById('hcPhoto');
@@ -1801,14 +1809,15 @@ function openHealthCheckSheet(plantId) {
       valEl.textContent = result.score;
       if (result.notes) document.getElementById('hc_notes').value = result.notes;
       document.getElementById('hc_diagnosis').value = result.diagnosis || '';
-      if (result.diagnosis) {
-        const diagEl = document.getElementById('hcDiagnosisPreview');
-        if (diagEl) { diagEl.textContent = result.diagnosis; diagEl.style.display = 'block'; }
+      document.getElementById('hc_cure').value = result.cure || '';
+      if (result.diagnosis || result.cure) {
+        let diagEl = document.getElementById('hcDiagnosisPreview');
+        const tableHTML = `<div class="diag-table-wrap"><table class="diag-table"><thead><tr><th>Diagnosis</th><th>Cure</th></tr></thead><tbody><tr><td>${escape(result.diagnosis)}</td><td>${escape(result.cure)}</td></tr></tbody></table></div>`;
+        if (diagEl) { diagEl.innerHTML = tableHTML; }
         else {
           const frag = document.createElement('div');
           frag.id = 'hcDiagnosisPreview';
-          frag.className = 'diagnosis-preview';
-          frag.textContent = result.diagnosis;
+          frag.innerHTML = tableHTML;
           document.getElementById('hc_diagnosis').insertAdjacentElement('beforebegin', frag);
         }
       }
@@ -1826,9 +1835,11 @@ function saveHealthCheck(plantId) {
   const visualScore = parseInt(document.getElementById('hc_health').value);
   const notes = document.getElementById('hc_notes').value.trim();
   const diagnosis = document.getElementById('hc_diagnosis')?.value.trim() || '';
+  const cure = document.getElementById('hc_cure')?.value.trim() || '';
   const photo = document.getElementById('hc_photo')?.value || '';
   const entry = { id: uid(), plantId, type: 'health-check', date: today(), visualScore, notes };
   if (diagnosis) entry.diagnosis = diagnosis;
+  if (cure) entry.cure = cure;
   if (photo) entry.photo = photo;
   data.logs.push(entry);
   saveData();
