@@ -336,6 +336,16 @@ function renderHome() {
         </div>`;
       }).join('');
 
+  const plantsWithPhoto = data.plants.filter(p => p.photo);
+  const featuredPlant = plantsWithPhoto.length
+    ? plantsWithPhoto[Math.floor(Math.random() * plantsWithPhoto.length)]
+    : null;
+  const featuredHTML = featuredPlant ? `
+    <div class="featured-plant" onclick="go('plant/${featuredPlant.id}')">
+      <img class="featured-img" src="${featuredPlant.photo}" alt="${escape(featuredPlant.name)}">
+      <div class="featured-label">${escape(featuredPlant.name)}</div>
+    </div>` : '';
+
   const recent = [...data.logs].reverse().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
   const recentHTML = recent.length === 0 ? '' : recent.map(l => {
     const p = data.plants.find(p => p.id === l.plantId);
@@ -380,6 +390,8 @@ function renderHome() {
       <h1>${greet}, Samuel</h1>
       <div class="date">${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
     </div>
+
+    ${featuredHTML}
 
     <div class="section-title">Today's tasks</div>
     ${tasksHTML}
