@@ -104,10 +104,12 @@ function getOverdueTasks() {
       const n = p.mistsPerWeek;
       const w = p.wateringDays || 7;
       const lastWater = getLastLog(p.id, 'water');
-      const cycleStart = lastWater ? lastWater.date : (p.acquired || today());
-      const daysSinceCycle = daysAgo(cycleStart) || 0;
+      if (!lastWater) continue; // no watering cycle to reference yet
+      const cycleStart = lastWater.date;
+      const cycleEnd = new Date(new Date(cycleStart + 'T00:00:00').getTime() + w * 86400000).toISOString().slice(0, 10);
+      const daysSinceCycle = Math.min(daysAgo(cycleStart) || 0, w);
       const mistsInCycle = data.logs.filter(l =>
-        l.plantId === p.id && l.type === 'fertilise' && l.date >= cycleStart
+        l.plantId === p.id && l.type === 'fertilise' && l.date >= cycleStart && l.date <= cycleEnd
       ).length;
       let slotsPassed = 0, oldestSlotDay = null;
       for (let a = 1; a <= n; a++) {
@@ -435,10 +437,12 @@ function getNextMistLabel(plant) {
   if (!n) return { label: '—', warn: false };
   const w = plant.wateringDays || 7;
   const lastWater = getLastLog(plant.id, 'water');
-  const cycleStart = lastWater ? lastWater.date : (plant.acquired || today());
-  const daysSinceCycle = daysAgo(cycleStart) || 0;
+  if (!lastWater) return { label: '—', warn: false }; // no cycle yet
+  const cycleStart = lastWater.date;
+  const cycleEnd = new Date(new Date(cycleStart + 'T00:00:00').getTime() + w * 86400000).toISOString().slice(0, 10);
+  const daysSinceCycle = Math.min(daysAgo(cycleStart) || 0, w);
   const mistsInCycle = data.logs.filter(l =>
-    l.plantId === plant.id && l.type === 'fertilise' && l.date >= cycleStart
+    l.plantId === plant.id && l.type === 'fertilise' && l.date >= cycleStart && l.date <= cycleEnd
   ).length;
   const slots = [];
   for (let a = 1; a <= n; a++) slots.push(Math.max(1, Math.round(a * w / (n + 1))));
