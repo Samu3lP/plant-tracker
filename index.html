@@ -219,6 +219,35 @@
     letter-spacing: 0.14em;
   }
 
+  /* Featured plant */
+  .featured-plant {
+    position: relative;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 24px;
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+    aspect-ratio: 4 / 3;
+  }
+  .featured-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .featured-label {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 28px 16px 14px;
+    background: linear-gradient(to top, rgba(30,26,20,0.65) 0%, transparent 100%);
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+    font-weight: 500;
+    color: #fff;
+    letter-spacing: -0.01em;
+    font-variation-settings: 'opsz' 24;
+  }
+
   /* Section heading */
   .section-title {
     font-family: 'Fraunces', serif;
@@ -1339,6 +1368,16 @@ function renderHome() {
         </div>`;
       }).join('');
 
+  const plantsWithPhoto = data.plants.filter(p => p.photo);
+  const featuredPlant = plantsWithPhoto.length
+    ? plantsWithPhoto[Math.floor(Math.random() * plantsWithPhoto.length)]
+    : null;
+  const featuredHTML = featuredPlant ? `
+    <div class="featured-plant" onclick="go('plant/${featuredPlant.id}')">
+      <img class="featured-img" src="${featuredPlant.photo}" alt="${escape(featuredPlant.name)}">
+      <div class="featured-label">${escape(featuredPlant.name)}</div>
+    </div>` : '';
+
   const recent = [...data.logs].reverse().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
   const recentHTML = recent.length === 0 ? '' : recent.map(l => {
     const p = data.plants.find(p => p.id === l.plantId);
@@ -1383,6 +1422,8 @@ function renderHome() {
       <h1>${greet}, Samuel</h1>
       <div class="date">${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
     </div>
+
+    ${featuredHTML}
 
     <div class="section-title">Today's tasks</div>
     ${tasksHTML}
