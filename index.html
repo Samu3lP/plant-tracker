@@ -977,6 +977,22 @@ function relativeDay(iso) {
 }
 
 /* ---------- HELPERS ---------- */
+// Returns the day-offsets within a watering cycle when misting should occur.
+// Repeats a 7-day misting week for as many weeks as the cycle covers.
+function getMistSlots(n, w) {
+  const slots = [];
+  for (let weekStart = 0; weekStart < w; weekStart += 7) {
+    for (let a = 1; a <= n; a++) {
+      const slot = weekStart + Math.max(1, Math.round(a * 7 / (n + 1)));
+      if (slot <= w) slots.push(slot);
+    }
+  }
+  if (slots.length === 0) {
+    for (let a = 1; a <= n; a++) slots.push(Math.max(1, Math.round(a * w / (n + 1))));
+  }
+  return slots;
+}
+
 function getLastLog(plantId, type) {
   return data.logs
     .filter(l => l.plantId === plantId && (!type || l.type === type))
@@ -1007,13 +1023,9 @@ function computeHealth(plant, atDate, visualScore) {
         l.plantId === plant.id && l.type === 'fertilise' &&
         l.date >= lastWater.date && l.date <= cycleEnd && l.date <= atDate
       ).length;
-      for (let a = 1; a <= n; a++) {
-        const targetDay = Math.max(1, Math.round(a * w / (n + 1)));
-        if (daysSinceCycle >= targetDay && a > mistsInCycle) {
-          mistScore = Math.max(0, 10 - (daysSinceCycle - targetDay));
-          break;
-        }
-      }
+      const slots = getMistSlots(n, w);
+      const firstMissed = slots.find((s, i) => i >= mistsInCycle && daysSinceCycle >= s);
+      if (firstMissed !== undefined) mistScore = Math.max(0, 10 - (daysSinceCycle - firstMissed));
     }
   }
   return Math.round(((waterScore + mistScore + visualScore) / 3) * 10);
@@ -1051,14 +1063,12 @@ function getOverdueTasks() {
       const mistsInCycle = data.logs.filter(l =>
         l.plantId === p.id && l.type === 'fertilise' && l.date >= cycleStart && l.date <= cycleEnd
       ).length;
-      let slotsPassed = 0, oldestSlotDay = null;
-      for (let a = 1; a <= n; a++) {
-        const targetDay = Math.max(1, Math.round(a * w / (n + 1)));
-        if (daysSinceCycle >= targetDay) { slotsPassed++; if (oldestSlotDay === null) oldestSlotDay = targetDay; }
-      }
+      const slots = getMistSlots(n, w);
+      const slotsPassed = slots.filter(s => daysSinceCycle >= s).length;
       if (slotsPassed > mistsInCycle) {
+        const oldestSlotDay = slots.find(s => daysSinceCycle >= s) || 0;
         const hasEverMisted = data.logs.some(l => l.plantId === p.id && l.type === 'fertilise');
-        tasks.push({ plant: p, type: 'fertilise', since: daysSinceCycle, interval: oldestSlotDay || 0, neverDone: !hasEverMisted });
+        tasks.push({ plant: p, type: 'fertilise', since: daysSinceCycle, interval: oldestSlotDay, neverDone: !hasEverMisted });
       }
     }
   }
@@ -1376,13 +1386,12 @@ function getNextMistLabel(plant) {
   const mistsInCycle = data.logs.filter(l =>
     l.plantId === plant.id && l.type === 'fertilise' && l.date >= cycleStart && l.date <= cycleEnd
   ).length;
-  const slots = [];
-  for (let a = 1; a <= n; a++) slots.push(Math.max(1, Math.round(a * w / (n + 1))));
+  const slots = getMistSlots(n, w);
   if (slots.filter(s => daysSinceCycle >= s).length > mistsInCycle) return { label: 'Overdue', warn: true };
-  const nextIdx = mistsInCycle;
-  const daysLeft = nextIdx < slots.length
-    ? slots[nextIdx] - daysSinceCycle
-    : Math.max(0, w - daysSinceCycle) + slots[0];
+  const nextSlot = slots[mistsInCycle];
+  const daysLeft = nextSlot !== undefined
+    ? nextSlot - daysSinceCycle
+    : Math.max(0, w - daysSinceCycle) + getMistSlots(n, w)[0];
   if (daysLeft <= 0) return { label: 'Now', warn: true };
   if (daysLeft === 1) return { label: 'Tomorrow', warn: false };
   return { label: `in ${daysLeft}d`, warn: false };
