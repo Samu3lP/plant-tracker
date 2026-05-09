@@ -198,6 +198,8 @@ const icons = {
   trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>',
   edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
   more: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>',
+  chevLeft: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  chevRight: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>',
 };
 
 // ============================================================
@@ -656,31 +658,85 @@ function renderPlantHealth(id) {
 }
 
 // --- Logs ---
+let calViewYear = new Date().getFullYear();
+let calViewMonth = new Date().getMonth(); // 0-based
+
 function renderLogs() {
   setHeader(`<div><div class="header-sub">All entries</div><div class="header-title">Log</div></div>`);
-  const logs = [...data.logs].reverse().sort((a, b) => b.date.localeCompare(a.date));
-  if (logs.length === 0) {
-    document.getElementById('view').innerHTML = `<div class="empty" style="margin-top:60px;"><div class="empty-icon">📓</div><h3>No entries yet</h3><p>Log a watering or observation from a plant's page.</p></div>`;
-    return;
-  }
-  // group by date
+  renderCalendar();
+}
+
+function renderCalendar() {
   const groups = {};
-  logs.forEach(l => { (groups[l.date] = groups[l.date] || []).push(l); });
-  const html = Object.keys(groups).sort((a, b) => b.localeCompare(a)).map(date => {
-    return `<div class="section-title" style="margin-top:18px;">${fmtDate(date)}</div>
-      <div class="card" style="padding:4px 16px;">${groups[date].map(l => {
-        const p = data.plants.find(p => p.id === l.plantId);
-        return `<div class="log-entry" onclick="${p ? `go('plant/${p.id}')` : ''}">
-          <div class="log-icon ${logCls(l.type)}">${logIcon(l.type)}</div>
-          <div class="log-body">
-            <div class="log-type">${logTypeLabel(l.type)} · ${p ? escape(p.name) : 'deleted plant'}</div>
-            ${l.notes ? `<div class="log-notes">"${escape(l.notes)}"</div>` : ''}
-          </div>
-          ${logScoreBadge(l)}
-        </div>`;
-      }).join('')}</div>`;
-  }).join('');
-  document.getElementById('view').innerHTML = html;
+  data.logs.forEach(l => { (groups[l.date] = groups[l.date] || []).push(l); });
+
+  const y = calViewYear, m = calViewMonth;
+  const firstDay = new Date(y, m, 1).getDay(); // 0=Sun
+  const startOffset = (firstDay + 6) % 7; // Mon-start offset
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const todayStr = today();
+  const monthName = new Date(y, m, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+
+  // prev/next month bounds
+  const hasPrev = Object.keys(groups).some(d => d < `${y}-${String(m + 1).padStart(2, '0')}-01`);
+  const nextY = m === 11 ? y + 1 : y, nextM = (m + 1) % 12;
+  const hasNext = new Date(nextY, nextM, 1) <= new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
+
+  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const headerRow = dayNames.map(d => `<div class="cal-day-name">${d}</div>`).join('');
+
+  let cells = '';
+  for (let i = 0; i < startOffset; i++) cells += `<div class="cal-cell cal-empty"></div>`;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const iso = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const entries = groups[iso] || [];
+    const isToday = iso === todayStr;
+    const types = [...new Set(entries.map(e => e.type))];
+    const dots = types.map(t => `<span class="cal-dot ${logCls(t) || 'obs'}"></span>`).join('');
+    cells += `<div class="cal-cell${isToday ? ' cal-today' : ''}${entries.length ? ' cal-has-entries' : ''}" ${entries.length ? `onclick="openDaySheet('${iso}')"` : ''}>
+      <span class="cal-num">${d}</span>
+      ${dots ? `<div class="cal-dots">${dots}</div>` : ''}
+    </div>`;
+  }
+
+  document.getElementById('view').innerHTML = `
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="calMove(-1)" ${!hasPrev ? 'disabled' : ''}>${icons.chevLeft}</button>
+      <span class="cal-month-label">${monthName}</span>
+      <button class="cal-nav-btn" onclick="calMove(1)" ${!hasNext ? 'disabled' : ''}>${icons.chevRight}</button>
+    </div>
+    <div class="cal-grid">
+      ${headerRow}
+      ${cells}
+    </div>`;
+}
+
+function calMove(dir) {
+  calViewMonth += dir;
+  if (calViewMonth < 0) { calViewMonth = 11; calViewYear--; }
+  if (calViewMonth > 11) { calViewMonth = 0; calViewYear++; }
+  renderCalendar();
+}
+
+function openDaySheet(iso) {
+  const entries = data.logs.filter(l => l.date === iso);
+  if (!entries.length) return;
+  const d = new Date(iso + 'T00:00:00');
+  const label = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+  document.getElementById('sheetHeader').innerHTML = `<div class="sheet-title">${label}</div>`;
+  document.getElementById('sheetBody').innerHTML = `<div style="padding:4px 0 8px;">` +
+    entries.map(l => {
+      const p = data.plants.find(p => p.id === l.plantId);
+      return `<div class="log-entry" style="cursor:${p ? 'pointer' : 'default'}" onclick="${p ? `closeSheet();go('plant/${p.id}')` : ''}">
+        <div class="log-icon ${logCls(l.type)}">${logIcon(l.type)}</div>
+        <div class="log-body">
+          <div class="log-type">${logTypeLabel(l.type)}${p ? ` · ${escape(p.name)}` : ' · deleted plant'}</div>
+          ${l.notes ? `<div class="log-notes">"${escape(l.notes)}"</div>` : ''}
+        </div>
+        ${logScoreBadge(l)}
+      </div>`;
+    }).join('') + `</div>`;
+  openSheet();
 }
 
 // --- Settings ---

@@ -607,6 +607,90 @@
     color: var(--moss-deep);
   }
 
+  /* Calendar */
+  .cal-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 16px 8px;
+  }
+  .cal-month-label {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    font-variation-settings: 'opsz' 24;
+  }
+  .cal-nav-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink);
+    box-shadow: var(--shadow-sm);
+  }
+  .cal-nav-btn svg { width: 18px; height: 18px; }
+  .cal-nav-btn:disabled { opacity: 0.3; pointer-events: none; }
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    padding: 0 12px 16px;
+  }
+  .cal-day-name {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink-faint);
+    padding: 6px 0;
+  }
+  .cal-cell {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    position: relative;
+    gap: 3px;
+  }
+  .cal-cell.cal-has-entries {
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+  }
+  .cal-cell.cal-has-entries:active { opacity: 0.7; }
+  .cal-cell.cal-today .cal-num {
+    background: var(--moss);
+    color: var(--surface);
+    border-radius: 50%;
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cal-num {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1;
+  }
+  .cal-empty .cal-num, .cal-empty { opacity: 0; pointer-events: none; }
+  .cal-dots {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+  }
+  .cal-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--moss-light);
+  }
+  .cal-dot.water { background: #3D5A6E; }
+  .cal-dot.fert { background: var(--terracotta); }
+  .cal-dot.health-check { background: var(--moss); }
+  .cal-dot.obs { background: var(--moss-light); }
+
   /* Modal / sheet */
   .sheet-backdrop {
     position: fixed; inset: 0;
