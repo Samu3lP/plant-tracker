@@ -992,14 +992,29 @@ function computeHealth(plant, atDate, visualScore) {
     const since = lastWater ? daysBetween(lastWater.date, atDate) : daysBetween(plant.acquired || atDate, atDate);
     if (since > plant.wateringDays) waterScore = Math.max(0, 10 - (since - plant.wateringDays));
   }
-  // Misting: (times misted in last 7 days / mistsPerWeek) * 10, capped at 10
+  // Misting: 10 if on schedule, lose 1 per day past the first missed slot
   let mistScore = 10;
   if (plant.mistsPerWeek) {
-    const weekStart = new Date(new Date(atDate).getTime() - 7 * 86400000).toISOString().slice(0, 10);
-    const mistCount = data.logs.filter(l =>
-      l.plantId === plant.id && l.type === 'fertilise' && l.date <= atDate && l.date >= weekStart
-    ).length;
-    mistScore = Math.min(10, (mistCount / plant.mistsPerWeek) * 10);
+    const n = plant.mistsPerWeek;
+    const w = plant.wateringDays || 7;
+    const lastWater = data.logs
+      .filter(l => l.plantId === plant.id && l.type === 'water' && l.date <= atDate)
+      .sort((a, b) => b.date.localeCompare(a.date))[0];
+    if (lastWater) {
+      const cycleEnd = new Date(new Date(lastWater.date + 'T00:00:00').getTime() + w * 86400000).toISOString().slice(0, 10);
+      const daysSinceCycle = Math.min(daysBetween(lastWater.date, atDate), w);
+      const mistsInCycle = data.logs.filter(l =>
+        l.plantId === plant.id && l.type === 'fertilise' &&
+        l.date >= lastWater.date && l.date <= cycleEnd && l.date <= atDate
+      ).length;
+      for (let a = 1; a <= n; a++) {
+        const targetDay = Math.max(1, Math.round(a * w / (n + 1)));
+        if (daysSinceCycle >= targetDay && a > mistsInCycle) {
+          mistScore = Math.max(0, 10 - (daysSinceCycle - targetDay));
+          break;
+        }
+      }
+    }
   }
   return Math.round(((waterScore + mistScore + visualScore) / 3) * 10);
 }
