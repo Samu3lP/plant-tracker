@@ -1,933 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#4A6B3A">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Garden">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="icon" href="icon-192.png" type="image/png">
-<title>Garden — Plant Health Tracker</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #F4EFE3;
-    --surface: #FBF8F0;
-    --surface-2: #EFE8D5;
-    --ink: #2A2620;
-    --ink-soft: #5C5448;
-    --ink-faint: #8A8270;
-    --moss: #4A6B3A;
-    --moss-deep: #324A28;
-    --moss-light: #8FA67E;
-    --moss-tint: #DCE5D2;
-    --terracotta: #B86F4A;
-    --terracotta-tint: #F0DCCF;
-    --divider: #E5DDC9;
-    --shadow-sm: 0 1px 2px rgba(42, 38, 32, 0.04), 0 2px 6px rgba(42, 38, 32, 0.04);
-    --shadow-md: 0 2px 4px rgba(42, 38, 32, 0.05), 0 8px 24px rgba(42, 38, 32, 0.06);
-    --shadow-lg: 0 4px 12px rgba(42, 38, 32, 0.08), 0 16px 40px rgba(42, 38, 32, 0.1);
-    --radius-sm: 8px;
-    --radius: 14px;
-    --radius-lg: 20px;
-    --safe-top: env(safe-area-inset-top, 0px);
-    --safe-bottom: env(safe-area-inset-bottom, 0px);
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-
-  html, body {
-    height: 100%;
-    overflow: hidden;
-    overscroll-behavior: none;
-  }
-
-  body {
-    font-family: 'Manrope', -apple-system, system-ui, sans-serif;
-    background: var(--bg);
-    color: var(--ink);
-    font-size: 16px;
-    line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
-    background-image:
-      radial-gradient(circle at 20% 10%, rgba(143, 166, 126, 0.08) 0%, transparent 40%),
-      radial-gradient(circle at 80% 60%, rgba(184, 111, 74, 0.05) 0%, transparent 50%);
-  }
-
-  h1, h2, h3, h4 {
-    font-family: 'Fraunces', Georgia, serif;
-    font-weight: 500;
-    color: var(--ink);
-    letter-spacing: -0.02em;
-    line-height: 1.15;
-    font-variation-settings: 'opsz' 48;
-  }
-
-  h1 { font-size: 32px; font-weight: 600; }
-  h2 { font-size: 24px; }
-  h3 { font-size: 18px; font-variation-settings: 'opsz' 24; }
-
-  button, input, select, textarea { font: inherit; color: inherit; }
-  button { cursor: pointer; border: none; background: none; }
-  input, textarea, select {
-    background: var(--surface);
-    border: 1px solid var(--divider);
-    border-radius: var(--radius-sm);
-    padding: 12px 14px;
-    width: 100%;
-    color: var(--ink);
-    transition: border-color 0.15s, background 0.15s;
-  }
-  input:focus, textarea:focus, select:focus {
-    outline: none;
-    border-color: var(--moss);
-    background: #fff;
-  }
-  textarea { resize: vertical; min-height: 80px; font-family: inherit; }
-  label {
-    display: block;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--ink-soft);
-    margin-bottom: 6px;
-    letter-spacing: 0.02em;
-  }
-
-  /* App shell */
-  .app {
-    height: 100dvh;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .header {
-    padding: calc(var(--safe-top) + 18px) 22px 14px;
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 12px;
-    background: var(--moss);
-    position: relative;
-    z-index: 5;
-  }
-
-  .header-title {
-    font-family: 'Fraunces', serif;
-    font-weight: 500;
-    font-size: 28px;
-    letter-spacing: -0.025em;
-    font-variation-settings: 'opsz' 60;
-    line-height: 1;
-    color: #fff;
-  }
-  .header-title em {
-    font-style: normal;
-    font-weight: 400;
-    color: rgba(255, 255, 255, 0.8);
-  }
-  .header-sub {
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.65);
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    margin-bottom: 4px;
-  }
-  .header-action {
-    width: 40px; height: 40px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    display: flex; align-items: center; justify-content: center;
-    color: #fff;
-    transition: all 0.15s;
-  }
-  .header-action:active { background: rgba(255, 255, 255, 0.25); transform: scale(0.95); }
-
-  .scroll {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
-    padding: 20px 22px 100px;
-  }
-
-  /* Bottom nav */
-  .tabbar {
-    display: flex;
-    background: #C4B896;
-    border-top: 1px solid #A89870;
-    padding: 8px 8px calc(var(--safe-bottom) + 8px);
-    position: relative;
-    z-index: 10;
-  }
-  .tab {
-    flex: 1;
-    display: flex; flex-direction: column; align-items: center;
-    gap: 3px;
-    padding: 8px 4px;
-    color: #6B5E3A;
-    border-radius: var(--radius-sm);
-    transition: color 0.15s;
-  }
-  .tab.active { color: var(--moss-deep); }
-  .tab svg { width: 22px; height: 22px; }
-  .tab span {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-  }
-  .tab-fab {
-    flex: 0 0 auto;
-    width: 56px;
-    margin-top: -16px;
-  }
-  .tab-fab .fab {
-    width: 52px; height: 52px;
-    border-radius: 50%;
-    background: var(--moss);
-    color: var(--surface);
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 14px rgba(74, 107, 58, 0.4);
-    transition: transform 0.15s;
-  }
-  .tab-fab .fab:active { transform: scale(0.92); }
-  .tab-fab .fab svg { width: 24px; height: 24px; }
-
-  /* Greeting + Today */
-  .greeting {
-    margin-bottom: 24px;
-  }
-  .greeting h1 {
-    font-size: 30px;
-    font-weight: 500;
-    margin-bottom: 4px;
-  }
-  .greeting h1 em {
-    font-style: normal;
-    color: var(--moss);
-    font-weight: 400;
-  }
-  .greeting .date {
-    font-size: 13px;
-    color: var(--ink-faint);
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-  }
-
-  /* Section heading */
-  .section-title {
-    font-family: 'Fraunces', serif;
-    font-size: 13px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.18em;
-    color: var(--ink-soft);
-    margin: 28px 0 12px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .section-title::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--divider);
-  }
-
-  /* Cards */
-  .card {
-    background: var(--surface);
-    border-radius: var(--radius);
-    padding: 16px;
-    box-shadow: var(--shadow-sm);
-    border: 1px solid rgba(229, 221, 201, 0.5);
-  }
-  .card + .card { margin-top: 10px; }
-
-  /* Task / overdue card */
-  .task-card {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    background: var(--surface);
-    padding: 14px 16px;
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-sm);
-    border: 1px solid rgba(229, 221, 201, 0.5);
-    transition: transform 0.1s;
-  }
-  .task-card:active { transform: scale(0.99); }
-  .task-card + .task-card { margin-top: 8px; }
-  .task-card.water-task { border-left: 3px solid #3B82F6; }
-  .task-card.mist-task  { border-left: 3px solid #93C5FD; }
-
-  .task-icon {
-    width: 38px; height: 38px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
-  .task-icon.water { background: #DBEAFE; color: #1D4ED8; }
-  .task-icon.mist  { background: #EFF6FF; color: #60A5FA; }
-  .task-icon.fert  { background: var(--terracotta-tint); color: var(--terracotta); }
-  .task-icon svg { width: 18px; height: 18px; }
-
-  .task-body { flex: 1; min-width: 0; }
-  .task-title {
-    font-weight: 600;
-    font-size: 15px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .task-meta {
-    font-size: 13px;
-    color: var(--ink-faint);
-    margin-top: 2px;
-  }
-
-  .task-action {
-    flex-shrink: 0;
-    padding: 8px 14px;
-    background: var(--moss);
-    color: var(--surface);
-    border-radius: 999px;
-    font-size: 13px;
-    font-weight: 600;
-    transition: background 0.15s;
-  }
-  .task-action:active { background: var(--moss-deep); }
-
-  /* Plant card */
-  .plant-card {
-    background: var(--surface);
-    border-radius: var(--radius);
-    padding: 14px;
-    box-shadow: var(--shadow-sm);
-    border: 1px solid rgba(229, 221, 201, 0.5);
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    transition: transform 0.1s;
-  }
-  .plant-card:active { transform: scale(0.99); }
-  .plant-card + .plant-card { margin-top: 10px; }
-
-  .plant-thumb {
-    width: 56px; height: 56px;
-    border-radius: 12px;
-    background: var(--moss-tint);
-    display: flex; align-items: center; justify-content: center;
-    color: var(--moss);
-    flex-shrink: 0;
-    overflow: hidden;
-    background-size: cover;
-    background-position: center;
-  }
-  .plant-thumb svg { width: 28px; height: 28px; }
-
-  .plant-info { flex: 1; min-width: 0; }
-  .plant-name {
-    font-family: 'Fraunces', serif;
-    font-weight: 500;
-    font-size: 17px;
-    line-height: 1.2;
-    margin-bottom: 2px;
-    font-variation-settings: 'opsz' 24;
-  }
-  .plant-species {
-    font-style: normal;
-    font-size: 12px;
-    color: var(--ink-faint);
-    font-family: 'Fraunces', serif;
-    font-variation-settings: 'opsz' 14;
-    margin-bottom: 6px;
-  }
-  .plant-tags {
-    display: flex; gap: 6px; flex-wrap: wrap;
-  }
-  .tag {
-    font-size: 11px;
-    padding: 2px 8px;
-    border-radius: 999px;
-    background: var(--surface-2);
-    color: var(--ink-soft);
-    font-weight: 500;
-    letter-spacing: 0.02em;
-  }
-  .tag.health-good { background: var(--moss-tint); color: var(--moss-deep); }
-  .tag.health-mid { background: #F0E5C8; color: #8A6F2A; }
-  .tag.health-low { background: var(--terracotta-tint); color: var(--terracotta); }
-
-  /* Empty state */
-  .empty {
-    text-align: center;
-    padding: 60px 20px;
-    color: var(--ink-faint);
-  }
-  .empty-icon {
-    font-size: 40px;
-    margin-bottom: 12px;
-    opacity: 0.5;
-  }
-  .empty h3 {
-    font-style: normal;
-    font-weight: 400;
-    color: var(--ink-soft);
-    margin-bottom: 6px;
-  }
-  .empty p { font-size: 14px; }
-
-  /* Plant detail */
-  .detail-hero {
-    margin: 0 -22px 20px;
-    padding: 0 22px 24px;
-    border-bottom: 1px solid var(--divider);
-  }
-  .back-btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 6px 0;
-    font-size: 14px;
-    color: var(--ink-soft);
-    margin-bottom: 16px;
-    font-weight: 500;
-  }
-  .back-btn svg { width: 16px; height: 16px; }
-
-  .detail-photo {
-    width: 100%;
-    aspect-ratio: 16 / 10;
-    border-radius: var(--radius);
-    background: var(--moss-tint);
-    margin-bottom: 16px;
-    display: flex; align-items: center; justify-content: center;
-    color: var(--moss);
-    background-size: cover;
-    background-position: center;
-    overflow: hidden;
-  }
-  .detail-photo svg { width: 56px; height: 56px; opacity: 0.5; }
-
-  .detail-name {
-    font-family: 'Fraunces', serif;
-    font-size: 32px;
-    font-weight: 500;
-    line-height: 1.1;
-    margin-bottom: 4px;
-    font-variation-settings: 'opsz' 60;
-  }
-  .detail-species {
-    font-family: 'Fraunces', serif;
-    font-style: normal;
-    font-size: 16px;
-    color: var(--ink-faint);
-    margin-bottom: 16px;
-  }
-
-  .stats-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 18px;
-  }
-  .stat {
-    background: var(--surface);
-    padding: 12px 14px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--divider);
-  }
-  .stat-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: var(--ink-faint);
-    margin-bottom: 4px;
-  }
-  .stat-value {
-    font-family: 'Fraunces', serif;
-    font-size: 18px;
-    font-weight: 500;
-    color: var(--ink);
-  }
-  .stat-value.warn { color: var(--terracotta); }
-
-  .health-bar { height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; margin-top: 8px; }
-  .health-bar-fill { height: 100%; border-radius: 4px; }
-  .health-bar-fill.good { background: #52B788; }
-  .health-bar-fill.mid { background: #F4A261; }
-  .health-bar-fill.low { background: #E63946; }
-  .plant-health-bar { height: 5px; background: var(--divider); border-radius: 3px; overflow: hidden; margin-top: 8px; }
-
-  .home-plant-row {
-    display: flex; align-items: center; gap: 12px;
-    padding: 10px 16px; cursor: pointer; transition: background 0.1s;
-  }
-  .home-plant-row:active { background: var(--surface-2); }
-  .home-plant-row + .home-plant-row { border-top: 1px solid var(--divider); }
-  .home-plant-thumb {
-    width: 42px; height: 42px; border-radius: var(--radius-sm); flex-shrink: 0;
-    background: var(--surface-2) center/cover no-repeat;
-    display: flex; align-items: center; justify-content: center; color: var(--ink-faint);
-  }
-  .home-plant-thumb svg { width: 18px; height: 18px; }
-  .home-health-num {
-    font-family: 'Fraunces', serif; font-size: 16px; font-weight: 500;
-    color: var(--ink); flex-shrink: 0; min-width: 30px; text-align: right;
-  }
-
-  .actions-row {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    margin-bottom: 8px;
-  }
-  .action-btn {
-    padding: 12px 8px;
-    background: var(--surface);
-    border: 1px solid var(--divider);
-    border-radius: var(--radius-sm);
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
-    color: var(--ink);
-    font-size: 12px;
-    font-weight: 600;
-    transition: all 0.15s;
-  }
-  .action-btn:active { background: var(--moss-tint); transform: scale(0.97); }
-  .action-btn svg { width: 18px; height: 18px; color: var(--moss); }
-
-  .plant-menu-btn {
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: var(--surface);
-    border: 1px solid var(--divider);
-    display: flex; align-items: center; justify-content: center;
-    color: var(--ink-soft);
-    cursor: pointer;
-    padding: 0;
-    flex-shrink: 0;
-  }
-  .plant-menu-btn svg { width: 18px; height: 18px; }
-  .plant-menu-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.32);
-    z-index: 199;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s;
-  }
-  .plant-menu-overlay.open { opacity: 1; pointer-events: all; }
-  .plant-side-menu {
-    position: fixed;
-    top: 0;
-    right: -280px;
-    width: 260px;
-    height: 100%;
-    background: var(--bg);
-    z-index: 200;
-    transition: right 0.25s ease;
-    padding: 64px 0 40px;
-    box-shadow: -4px 0 24px rgba(0,0,0,0.13);
-    overflow-y: auto;
-  }
-  .plant-side-menu.open { right: 0; }
-  .menu-action {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 15px 24px;
-    cursor: pointer;
-    font-size: 15px;
-    font-weight: 500;
-    color: var(--ink);
-    border-bottom: 1px solid var(--divider);
-  }
-  .menu-action:active { background: var(--surface); }
-  .menu-action svg { width: 20px; height: 20px; color: var(--moss); flex-shrink: 0; }
-  .menu-action.danger { color: var(--terracotta); }
-  .menu-action.danger svg { color: var(--terracotta); }
-
-  /* Health chart */
-  .chart-wrap {
-    background: var(--surface);
-    border-radius: var(--radius);
-    padding: 16px;
-    border: 1px solid var(--divider);
-    margin-bottom: 18px;
-  }
-  .chart-wrap h4 {
-    font-family: 'Fraunces', serif;
-    font-size: 14px;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: var(--ink-soft);
-    margin-bottom: 12px;
-    font-weight: 600;
-  }
-  .chart-svg { width: 100%; display: block; }
-
-  /* Log entry */
-  .log-entry {
-    display: flex;
-    gap: 12px;
-    padding: 12px 0;
-    border-bottom: 1px solid var(--divider);
-  }
-  .log-entry:last-child { border-bottom: none; }
-  .log-icon {
-    width: 32px; height: 32px;
-    border-radius: 50%;
-    background: var(--surface-2);
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
-  .log-icon svg { width: 14px; height: 14px; color: var(--moss); }
-  .log-icon.water { background: #DDE7EE; }
-  .log-icon.water svg { color: #3D5A6E; }
-  .log-icon.fert { background: var(--terracotta-tint); }
-  .log-icon.fert svg { color: var(--terracotta); }
-  .log-icon.health-check { background: var(--moss-tint); }
-  .log-icon.health-check svg { color: var(--moss); }
-
-  .log-body { flex: 1; }
-  .log-type {
-    font-weight: 600;
-    font-size: 14px;
-  }
-  .log-date {
-    font-size: 12px;
-    color: var(--ink-faint);
-    margin-top: 1px;
-  }
-  .log-notes {
-    font-size: 14px;
-    color: var(--ink-soft);
-    margin-top: 4px;
-    font-style: normal;
-    font-family: 'Fraunces', serif;
-    font-variation-settings: 'opsz' 14;
-  }
-  .log-score {
-    align-self: flex-start;
-    font-family: 'Fraunces', serif;
-    font-size: 14px;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 999px;
-    background: var(--moss-tint);
-    color: var(--moss-deep);
-  }
-
-  /* Modal / sheet */
-  .sheet-backdrop {
-    position: fixed; inset: 0;
-    background: rgba(42, 38, 32, 0.4);
-    z-index: 100;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.25s;
-  }
-  .sheet-backdrop.open { opacity: 1; pointer-events: auto; }
-
-  .sheet {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    background: var(--bg);
-    border-radius: 24px 24px 0 0;
-    max-height: 90dvh;
-    z-index: 101;
-    transform: translateY(100%);
-    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 -10px 40px rgba(42, 38, 32, 0.15);
-  }
-  .sheet.open { transform: translateY(0); }
-  .sheet-handle {
-    width: 36px; height: 4px;
-    background: var(--ink-faint);
-    opacity: 0.3;
-    border-radius: 2px;
-    margin: 10px auto 6px;
-  }
-  .sheet-header {
-    padding: 8px 22px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid var(--divider);
-  }
-  .sheet-header h2 {
-    font-size: 22px;
-    font-weight: 500;
-  }
-  .sheet-close, .sheet-save {
-    font-size: 15px;
-    font-weight: 600;
-    padding: 6px 0;
-  }
-  .sheet-close { color: var(--ink-soft); }
-  .sheet-save { color: var(--moss); }
-  .sheet-body {
-    flex: 1;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    padding: 20px 22px calc(var(--safe-bottom) + 24px);
-  }
-
-  .field { margin-bottom: 16px; }
-  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-  .seg {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
-    background: var(--surface-2);
-    border-radius: var(--radius-sm);
-    padding: 4px;
-  }
-  .seg button {
-    padding: 10px 4px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--ink-soft);
-    transition: all 0.15s;
-  }
-  .seg button.active {
-    background: var(--surface);
-    color: var(--ink);
-    box-shadow: var(--shadow-sm);
-  }
-
-  .health-slider-wrap {
-    background: var(--surface);
-    border: 1px solid var(--divider);
-    border-radius: var(--radius-sm);
-    padding: 16px;
-  }
-  .health-slider-val {
-    font-family: 'Fraunces', serif;
-    font-size: 32px;
-    font-weight: 500;
-    text-align: center;
-    color: var(--moss);
-    margin-bottom: 8px;
-  }
-  input[type=range] {
-    -webkit-appearance: none;
-    appearance: none;
-    background: transparent;
-    padding: 0;
-    border: none;
-    width: 100%;
-  }
-  input[type=range]::-webkit-slider-runnable-track {
-    height: 6px;
-    background: var(--surface-2);
-    border-radius: 3px;
-  }
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 24px; height: 24px;
-    background: var(--moss);
-    border-radius: 50%;
-    margin-top: -9px;
-    border: 3px solid var(--surface);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-  }
-  .slider-scale {
-    display: flex;
-    justify-content: space-between;
-    font-size: 11px;
-    color: var(--ink-faint);
-    margin-top: 6px;
-    padding: 0 2px;
-  }
-
-  .photo-input {
-    width: 100%;
-    aspect-ratio: 16/10;
-    background: var(--surface);
-    border: 2px dashed var(--divider);
-    border-radius: var(--radius);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 6px;
-    color: var(--ink-faint);
-    background-size: cover;
-    background-position: center;
-    overflow: hidden;
-    cursor: pointer;
-  }
-  .photo-input.has-photo { border-style: solid; }
-  .photo-input svg { width: 32px; height: 32px; }
-  .photo-input span { font-size: 13px; }
-
-  .toggle-row {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 13px; color: var(--ink-soft); cursor: pointer;
-  }
-  .toggle-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--moss); cursor: pointer; }
-
-  .photo-timeline {
-    display: flex;
-    gap: 10px;
-    overflow-x: auto;
-    padding: 2px 0 12px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    margin-bottom: 4px;
-  }
-  .photo-timeline::-webkit-scrollbar { display: none; }
-  .photo-item { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 5px; }
-  .photo-thumb {
-    width: 88px;
-    height: 88px;
-    border-radius: var(--radius-sm);
-    background: var(--surface-2) center/cover no-repeat;
-    cursor: pointer;
-    border: 1px solid var(--divider);
-  }
-  .photo-thumb-label { font-size: 10px; color: var(--ink-faint); text-align: center; max-width: 88px; }
-  .photo-thumb-tag {
-    font-size: 9px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--moss);
-  }
-
-  .diag-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-    margin-top: 10px;
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-  }
-  .diag-table th {
-    background: var(--moss-tint);
-    color: var(--moss);
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    padding: 6px 10px;
-    text-align: left;
-    border-bottom: 1px solid rgba(0,0,0,0.06);
-  }
-  .diag-table td {
-    padding: 8px 10px;
-    vertical-align: top;
-    color: var(--ink);
-    line-height: 1.55;
-    border-right: 1px solid rgba(0,0,0,0.06);
-    width: 50%;
-  }
-  .diag-table td:last-child { border-right: none; }
-  .diag-table tr { background: var(--surface); }
-  .diag-table-wrap {
-    border: 1px solid rgba(0,0,0,0.08);
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-  }
-
-  /* Settings */
-  .setting-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px;
-    background: var(--surface);
-    border: 1px solid var(--divider);
-    border-radius: var(--radius-sm);
-    width: 100%;
-    text-align: left;
-    color: var(--ink);
-    transition: background 0.15s;
-  }
-  .setting-row:active { background: var(--surface-2); }
-  .setting-row + .setting-row { margin-top: 8px; }
-  .setting-row svg { width: 18px; height: 18px; color: var(--ink-faint); }
-  .setting-row.danger { color: var(--terracotta); }
-
-  .toast {
-    position: fixed;
-    bottom: calc(var(--safe-bottom) + 90px);
-    left: 50%;
-    transform: translateX(-50%) translateY(100px);
-    background: var(--ink);
-    color: var(--bg);
-    padding: 10px 18px;
-    border-radius: 999px;
-    font-size: 14px;
-    font-weight: 500;
-    box-shadow: var(--shadow-lg);
-    z-index: 200;
-    opacity: 0;
-    transition: all 0.25s;
-    pointer-events: none;
-  }
-  .toast.show {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-</style>
-</head>
-<body>
-
-<div class="app">
-  <!-- Header -->
-  <div class="header" id="header"></div>
-
-  <!-- Main scrollable view -->
-  <div class="scroll" id="view"></div>
-
-  <!-- Bottom tab bar -->
-  <nav class="tabbar">
-    <button class="tab" data-route="home">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>
-      <span>Today</span>
-    </button>
-    <button class="tab" data-route="plants">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V12"/><path d="M12 12C8 12 4 9 4 5c0 0 4 0 6 2 2 2 2 5 2 5z"/><path d="M12 12c4 0 8-3 8-7 0 0-4 0-6 2-2 2-2 5-2 5z"/></svg>
-      <span>Plants</span>
-    </button>
-    <div class="tab-fab">
-      <button class="fab" id="addBtn" aria-label="Add plant">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-      </button>
-    </div>
-    <button class="tab" data-route="logs">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
-      <span>Log</span>
-    </button>
-    <button class="tab" data-route="settings">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51h0a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-      <span>Settings</span>
-    </button>
-  </nav>
-</div>
-
-<!-- Sheet -->
-<div class="sheet-backdrop" id="backdrop"></div>
-<div class="sheet" id="sheet">
-  <div class="sheet-handle"></div>
-  <div class="sheet-header" id="sheetHeader"></div>
-  <div class="sheet-body" id="sheetBody"></div>
-</div>
-
-<!-- Toast -->
-<div class="toast" id="toast"></div>
-
-<script>
-/* ---------- DATA LAYER ---------- */
+// ============================================================
+// DATA LAYER
+// ============================================================
 const APP_VERSION = '1.5';
 const STORAGE_KEY = 'garden_v1';
 const APIKEY_KEY = 'garden_apikey';
@@ -976,7 +49,9 @@ function relativeDay(iso) {
   return `${Math.floor(n/30)} months ago`;
 }
 
-/* ---------- HELPERS ---------- */
+// ============================================================
+// HELPERS
+// ============================================================
 function getLastLog(plantId, type) {
   return data.logs
     .filter(l => l.plantId === plantId && (!type || l.type === type))
@@ -1082,7 +157,9 @@ function logScoreBadge(l) {
   return '';
 }
 
-/* ---------- ICONS ---------- */
+// ============================================================
+// ICONS
+// ============================================================
 const icons = {
   leaf: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 014 13V8a8 8 0 018-8h0a8 8 0 018 8 13 13 0 01-9 12.5"/><path d="M2 22c0-3 6-7 10-7"/></svg>',
   water: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l5 6.5a6.5 6.5 0 11-10 0z"/></svg>',
@@ -1100,7 +177,9 @@ const icons = {
   more: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>',
 };
 
-/* ---------- AI IDENTIFICATION ---------- */
+// ============================================================
+// AI
+// ============================================================
 async function rateHealthFromImage(base64Image, withDiagnosis = false) {
   const key = getApiKey();
   if (!key) throw new Error('no-key');
@@ -1178,14 +257,18 @@ async function identifyPlant(base64Image) {
   return JSON.parse(text);
 }
 
-/* ---------- ROUTING ---------- */
+// ============================================================
+// ROUTING
+// ============================================================
 function getRoute() {
   return window.location.hash.slice(1) || 'home';
 }
 function go(route) { window.location.hash = route; }
 window.addEventListener('hashchange', render);
 
-/* ---------- RENDER ---------- */
+// ============================================================
+// VIEWS / RENDER
+// ============================================================
 function render() {
   const route = getRoute();
   const [name, param, subpage] = route.split('/');
@@ -1204,7 +287,7 @@ function render() {
   }
 }
 
-/* HOME / TODAY */
+// --- Home ---
 function renderHome() {
   const hr = new Date().getHours();
   const greet = hr < 5 ? 'Late night' : hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening';
@@ -1287,7 +370,7 @@ function renderHome() {
   `;
 }
 
-/* PLANTS LIST */
+// --- Plants ---
 function renderPlants() {
   setHeader(`<div><div class="header-sub">${data.plants.length} ${data.plants.length === 1 ? 'plant' : 'plants'}</div><div class="header-title">My plants</div></div>`);
 
@@ -1338,7 +421,7 @@ function renderPlants() {
   document.getElementById('view').innerHTML = html;
 }
 
-/* PLANT DETAIL */
+// --- Plant Detail ---
 function getNextWaterLabel(plant) {
   if (!plant.wateringDays) return { label: '—', warn: false };
   const lastWater = getLastLog(plant.id, 'water');
@@ -1441,7 +524,7 @@ function renderPlantDetail(id) {
   `;
 }
 
-/* PLANT HEALTH */
+// --- Plant Health ---
 function renderPlantHealth(id) {
   const p = data.plants.find(p => p.id === id);
   if (!p) { go('plant/' + id); return; }
@@ -1550,7 +633,7 @@ function renderPlantHealth(id) {
   `;
 }
 
-/* LOGS */
+// --- Logs ---
 function renderLogs() {
   setHeader(`<div><div class="header-sub">All entries</div><div class="header-title">Log</div></div>`);
   const logs = [...data.logs].reverse().sort((a, b) => b.date.localeCompare(a.date));
@@ -1578,7 +661,7 @@ function renderLogs() {
   document.getElementById('view').innerHTML = html;
 }
 
-/* SETTINGS */
+// --- Settings ---
 function renderSettings() {
   setHeader(`<div><div class="header-sub">App</div><div class="header-title">Settings</div></div>`);
   document.getElementById('view').innerHTML = `
@@ -1620,7 +703,9 @@ function renderSettings() {
   `;
 }
 
-/* ---------- ACTIONS ---------- */
+// ============================================================
+// ACTIONS
+// ============================================================
 function quickLog(plantId, type) {
   data.logs.push({ id: uid(), plantId, type, date: today(), notes: '', healthScore: null });
   saveData();
@@ -1675,7 +760,9 @@ function resetAll() {
   render();
 }
 
-/* ---------- SHEETS ---------- */
+// ============================================================
+// SHEETS
+// ============================================================
 const sheet = document.getElementById('sheet');
 const backdrop = document.getElementById('backdrop');
 function openSheet() { sheet.classList.add('open'); backdrop.classList.add('open'); }
@@ -1955,7 +1042,9 @@ function saveLog(plantId) {
   render();
 }
 
-/* image compression */
+// ============================================================
+// IMAGES
+// ============================================================
 async function compressImage(file) {
   return new Promise(resolve => {
     const r = new FileReader();
@@ -1990,7 +1079,9 @@ function openPhotoLightbox(src) {
   document.body.appendChild(ov);
 }
 
-/* ---------- UTIL ---------- */
+// ============================================================
+// UTILS
+// ============================================================
 function escape(s) {
   if (s == null) return '';
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -2003,7 +1094,9 @@ function toast(msg) {
   setTimeout(() => t.classList.remove('show'), 1800);
 }
 
-/* ---------- EVENTS ---------- */
+// ============================================================
+// EVENTS
+// ============================================================
 document.querySelectorAll('.tab').forEach(t => {
   t.addEventListener('click', () => go(t.dataset.route));
 });
@@ -2021,6 +1114,3 @@ if ('serviceWorker' in navigator) {
 /* boot */
 go(getRoute());
 render();
-</script>
-</body>
-</html>
