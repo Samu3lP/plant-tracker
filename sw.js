@@ -1,7 +1,9 @@
-const CACHE = 'garden-v10';
+const CACHE = 'garden-v11';
 const ASSETS = [
   './',
   './index.html',
+  './style.css',
+  './app.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
